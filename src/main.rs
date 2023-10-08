@@ -360,7 +360,6 @@ fn update_life(mut life: ResMut<'_, Life>) {
     }
 
     life.cells = next_gen;
-    info!("Tick.");
 }
 
 
