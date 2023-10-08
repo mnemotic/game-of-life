@@ -6,6 +6,7 @@ use bevy::prelude::*;
 
 use crate::{GameState, LifeUpdateTickEvent};
 
+
 #[derive(Default)]
 pub struct InputPlugin;
 
