@@ -16,6 +16,8 @@ use bevy::math::IRect;
 use bevy::prelude::*;
 use bevy_pixel_camera::{PixelCameraBundle, PixelCameraPlugin};
 
+mod input;
+
 mod config {
     pub mod window {
         pub const WIDTH: u32 = 1920;
@@ -64,7 +66,7 @@ fn main() {
             TimerMode::Repeating,
         )))
         .add_state::<GameState>()
-        .add_plugins((
+        .add_plugins(
             DefaultPlugins
                 .set(WindowPlugin {
                     primary_window: Some(Window {
@@ -76,14 +78,18 @@ fn main() {
                     ..default()
                 })
                 .set(ImagePlugin::default_nearest()),
-            PixelCameraPlugin,
-        ))
+        )
         .add_plugins((
+            PixelCameraPlugin,
             LogDiagnosticsPlugin::default(),
             FrameTimeDiagnosticsPlugin::default(),
         ))
-        .add_systems(Startup, setup_camera)
-        .add_systems(Startup, load_assets)
+        .add_plugins(input::InputPlugin)
+        .add_systems(Startup, (setup_camera, load_assets))
+        .add_systems(
+            Startup,
+            |mut next_state: ResMut<'_, NextState<GameState>>| next_state.set(GameState::Startup),
+        )
         .add_systems(
             Update,
             check_asset_loading.run_if(in_state(GameState::Startup)),
@@ -91,15 +97,13 @@ fn main() {
         .add_systems(Update, close_on_esc)
         .add_systems(
             OnEnter(GameState::Running),
-            (seed_life, spawn_cell_sprites).chain(),
+            (seed_life, spawn_cell_sprites).chain().run_if(run_once()),
         )
         .add_systems(
             Update,
-            (
-                update_life.run_if(in_state(GameState::Running)),
-                update_cell_sprites,
-            )
-                .chain(),
+            (update_life, update_cell_sprites)
+                .chain()
+                .run_if(in_state(GameState::Running)),
         )
         .run();
 }
@@ -108,6 +112,7 @@ fn main() {
 #[derive(States, Clone, Debug, Default, PartialEq, Eq, Hash)]
 enum GameState {
     #[default]
+    None,
     Startup,
     Running,
     Paused,
