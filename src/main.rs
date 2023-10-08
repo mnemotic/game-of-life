@@ -10,6 +10,7 @@
 use std::ops::Neg;
 
 use ahash::AHashMap as HashMap;
+
 use bevy::asset::LoadState;
 use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 use bevy::math::IRect;
@@ -82,7 +83,7 @@ fn main() {
         .add_plugins((
             PixelCameraPlugin,
             LogDiagnosticsPlugin::default(),
-            FrameTimeDiagnosticsPlugin::default(),
+            FrameTimeDiagnosticsPlugin,
         ))
         .add_plugins(input::InputPlugin)
         .add_systems(Startup, (setup_camera, load_assets))
@@ -143,9 +144,6 @@ pub struct Life {
 
 impl Life {
     pub fn new(width: u32, height: u32) -> Self {
-        let width = width;
-        let height = height;
-
         let half_width = (width / 2) as i32;
         let half_height = (height / 2) as i32;
 
@@ -193,7 +191,7 @@ fn check_asset_loading(
     assets: Res<'_, GameAssets>,
     mut next_state: ResMut<'_, NextState<GameState>>,
 ) {
-    match asset_server.get_group_load_state(assets.iter().map(|h| h.id())) {
+    match asset_server.get_group_load_state(assets.iter().map(HandleUntyped::id)) {
         LoadState::Loading => {
             info!("Loading assets...");
         }
@@ -229,19 +227,20 @@ fn spawn_cell_sprites(
 
     for y in world.bounds.min.y..world.bounds.max.y {
         for x in world.bounds.min.x..world.bounds.max.x {
-            let sprite = match world.cells.contains_key(&IVec2::new(x, y)) {
-                true => TextureAtlasSprite {
+            let sprite = if world.cells.contains_key(&IVec2::new(x, y)) {
+                TextureAtlasSprite {
                     index: 254,
                     color: LIVE_COLOR,
                     custom_size: Some(SPRITE_SIZE),
                     ..default()
-                },
-                false => TextureAtlasSprite {
+                }
+            } else {
+                TextureAtlasSprite {
                     index: 255,
                     color: DEAD_COLOR,
                     custom_size: Some(SPRITE_SIZE),
                     ..default()
-                },
+                }
             };
 
             let transform = Transform::from_translation(
@@ -275,7 +274,7 @@ fn update_life(
 
         // Wrap horizontally.
         if x < min_x {
-            x = max_x - (x - min_x)
+            x = max_x - (x - min_x);
         } else if x > max_x {
             x = min_x + (x - max_x);
         }
@@ -285,7 +284,7 @@ fn update_life(
 
         // Wrap vertically.
         if y < min_y {
-            y = max_y - (y - min_y)
+            y = max_y - (y - min_y);
         } else if y > max_y {
             y = min_y + (y - max_y);
         }
@@ -313,13 +312,13 @@ fn update_life(
             // count is anything else, then the state of the inner cell is death.
 
             let mut count = 0;
-            if life.cells.get(&pt).cloned().unwrap_or_default() {
+            if life.cells.get(&pt).copied().unwrap_or_default() {
                 count += 1;
             }
 
             for offset in NEIGHBOR_OFFSETS {
                 let pt = wrap(&life.bounds, pt + offset);
-                if life.cells.get(&pt).cloned().unwrap_or_default() {
+                if life.cells.get(&pt).copied().unwrap_or_default() {
                     count += 1;
                 }
             }
@@ -331,7 +330,7 @@ fn update_life(
                 }
                 4 => {
                     // Same. If cell was empty before, it was dead (`false`).
-                    next_gen.insert(pt, life.cells.get(&pt).cloned().unwrap_or_default());
+                    next_gen.insert(pt, life.cells.get(&pt).copied().unwrap_or_default());
                 }
                 _ => {
                     // Death.
@@ -353,7 +352,7 @@ fn update_cell_sprites(
     use config::cells::{DEAD_COLOR, LIVE_COLOR};
 
     for (position, mut sprite) in &mut q_sprites {
-        if world.cells.get(&position.0).cloned().unwrap_or_default() {
+        if world.cells.get(&position.0).copied().unwrap_or_default() {
             sprite.index = 254;
             sprite.color = LIVE_COLOR;
         } else {
