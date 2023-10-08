@@ -67,6 +67,7 @@ fn main() {
             TimerMode::Repeating,
         )))
         .add_state::<GameState>()
+        .add_event::<LifeUpdateTickEvent>()
         .add_plugins(
             DefaultPlugins
                 .set(WindowPlugin {
@@ -95,16 +96,20 @@ fn main() {
             Update,
             check_asset_loading.run_if(in_state(GameState::Startup)),
         )
-        .add_systems(Update, close_on_esc)
         .add_systems(
             OnEnter(GameState::Running),
             (seed_life, spawn_cell_sprites).chain().run_if(run_once()),
+        )
+        .add_systems(Update, close_on_esc)
+        .add_systems(
+            Update,
+            tick_life_update_timer.run_if(in_state(GameState::Running)),
         )
         .add_systems(
             Update,
             (update_life, update_cell_sprites)
                 .chain()
-                .run_if(in_state(GameState::Running)),
+                .run_if(on_event::<LifeUpdateTickEvent>()),
         )
         .run();
 }
@@ -130,6 +135,10 @@ struct GlyphAtlas(pub Handle<TextureAtlas>);
 
 #[derive(Resource, Deref, DerefMut)]
 struct LifeUpdateTimer(Timer);
+
+
+#[derive(Event)]
+struct LifeUpdateTickEvent;
 
 
 #[derive(Component, Deref)]
@@ -260,11 +269,18 @@ fn spawn_cell_sprites(
 }
 
 
-fn update_life(
+fn tick_life_update_timer(
     mut timer: ResMut<'_, LifeUpdateTimer>,
     time: Res<'_, Time>,
-    mut life: ResMut<'_, Life>,
+    mut ev_update: EventWriter<'_, LifeUpdateTickEvent>,
 ) {
+    if timer.tick(time.delta()).finished() {
+        ev_update.send(LifeUpdateTickEvent);
+    }
+}
+
+
+fn update_life(mut life: ResMut<'_, Life>) {
     fn wrap(bounds: &IRect, xy: IVec2) -> IVec2 {
         let mut x = xy.x;
         let mut y = xy.y;
@@ -292,9 +308,6 @@ fn update_life(
         IVec2 { x, y }
     }
 
-    if !timer.tick(time.delta()).finished() {
-        return;
-    }
 
     let mut next_gen: HashMap<IVec2, bool> = HashMap::with_capacity(
         (life.bounds.width() * life.bounds.height())
