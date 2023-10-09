@@ -14,14 +14,17 @@ impl Plugin for InputPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             Update,
-            (pause, single_step.run_if(in_state(GameState::Paused))),
+            (
+                toggle_paused,
+                advance_sim_once.run_if(in_state(GameState::Paused)),
+            ),
         );
     }
 }
 
 
 /// Pause / unpause the simulation.
-fn pause(
+fn toggle_paused(
     keys: Res<'_, Input<KeyCode>>,
     state: Res<'_, State<GameState>>,
     mut next_state: ResMut<'_, NextState<GameState>>,
@@ -36,8 +39,11 @@ fn pause(
 }
 
 
-/// Single-step the simulation while paused.
-fn single_step(keys: Res<'_, Input<KeyCode>>, mut ev_update: EventWriter<'_, LifeUpdateTickEvent>) {
+/// Advance the simulation a single generation while paused.
+fn advance_sim_once(
+    keys: Res<'_, Input<KeyCode>>,
+    mut ev_update: EventWriter<'_, LifeUpdateTickEvent>,
+) {
     if keys.just_pressed(KeyCode::Space) {
         ev_update.send(LifeUpdateTickEvent);
     }
