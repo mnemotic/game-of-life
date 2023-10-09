@@ -27,8 +27,8 @@ mod input;
 
 mod config {
     pub mod window {
-        pub const WIDTH: u32 = 1920;
-        pub const HEIGHT: u32 = 1080;
+        pub const WIDTH: u32 = 1280;
+        pub const HEIGHT: u32 = 720;
     }
 
     pub mod cells {
@@ -57,6 +57,7 @@ const NEIGHBOR_OFFSETS: [IVec2; 8] = [
 fn main() {
     use bevy::window::close_on_esc;
 
+    // @REVIEW: See <https://github.com/bevy-cheatbook/bevy-cheatbook/issues/196>.
     #[cfg(target_arch = "wasm32")]
     console_error_panic_hook::set_once();
 
