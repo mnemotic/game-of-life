@@ -13,6 +13,7 @@
 #![allow(clippy::missing_panics_doc)]
 #![allow(clippy::must_use_candidate)]
 
+use std::collections::VecDeque;
 use std::ops::Neg;
 
 use ahash::AHashMap as HashMap;
@@ -68,13 +69,14 @@ fn main() {
         .init_resource::<GameAssets>()
         .insert_resource(Msaa::Off)
         .insert_resource(ClearColor(Color::BLACK))
-        .insert_resource(Life::new(width / 20, height / 20))
-        .insert_resource(LifeUpdateTimer(Timer::from_seconds(
+        .insert_resource(Simulation::new(width / 20, height / 20))
+        .insert_resource(SimulationUpdateTimer(Timer::from_seconds(
             1.0,
             TimerMode::Repeating,
         )))
         .add_state::<GameState>()
-        .add_event::<LifeUpdateTickEvent>()
+        .add_event::<AdvanceSimTriggeredEvent>()
+        .add_event::<RewindSimTriggeredEvent>()
         .add_plugins(
             DefaultPlugins
                 .set(WindowPlugin {
@@ -94,7 +96,7 @@ fn main() {
             FrameTimeDiagnosticsPlugin,
         ))
         .add_plugins(input::InputPlugin)
-        .add_systems(Startup, (setup_camera, load_assets))
+        .add_systems(Startup, (init_camera, load_assets))
         .add_systems(
             Startup,
             |mut next_state: ResMut<'_, NextState<GameState>>| next_state.set(GameState::Startup),
@@ -105,19 +107,28 @@ fn main() {
         )
         .add_systems(
             OnEnter(GameState::Running),
-            (seed_life, spawn_cell_sprites).chain().run_if(run_once()),
+            (init_simulation, init_presentation)
+                .chain()
+                .run_if(run_once()),
         )
         .add_systems(Update, close_on_esc)
         .add_systems(
             Update,
-            tick_life_update_timer.run_if(in_state(GameState::Running)),
+            tick_simulation_update_timer.run_if(in_state(GameState::Running)),
         )
         .add_systems(
             Update,
-            (update_life, update_cell_sprites)
+            (advance_simulation, update_presentation)
                 .chain()
-                .run_if(on_event::<LifeUpdateTickEvent>()),
+                .run_if(on_event::<AdvanceSimTriggeredEvent>()),
         )
+        .add_systems(
+            Update,
+            (rewind_simulation, update_presentation)
+                .chain()
+                .run_if(on_event::<RewindSimTriggeredEvent>()),
+        )
+        .add_systems(OnEnter(GameState::Paused), reset_simulation_update_timer)
         .run();
 }
 
@@ -141,11 +152,14 @@ struct GlyphAtlas(pub Handle<TextureAtlas>);
 
 
 #[derive(Resource, Deref, DerefMut)]
-struct LifeUpdateTimer(Timer);
+struct SimulationUpdateTimer(Timer);
 
 
 #[derive(Event)]
-struct LifeUpdateTickEvent;
+struct AdvanceSimTriggeredEvent;
+
+#[derive(Event)]
+struct RewindSimTriggeredEvent;
 
 
 #[derive(Component, Deref)]
@@ -153,12 +167,15 @@ pub struct Position(pub IVec2);
 
 
 #[derive(Resource)]
-pub struct Life {
+pub struct Simulation {
     pub bounds: IRect,
+    pub history: VecDeque<HashMap<IVec2, bool>>,
     pub cells: HashMap<IVec2, bool>,
 }
 
-impl Life {
+impl Simulation {
+    pub const MAX_HISTORY_SIZE: usize = 32;
+
     pub fn new(width: u32, height: u32) -> Self {
         let half_width = (width / 2) as i32;
         let half_height = (height / 2) as i32;
@@ -169,15 +186,17 @@ impl Life {
         };
         let min = max.neg();
 
+        let capacity = (width * height).try_into().unwrap();
         Self {
             bounds: IRect::from_corners(min, max),
-            cells: HashMap::with_capacity((width * height).try_into().unwrap()),
+            cells: HashMap::with_capacity(capacity),
+            history: VecDeque::with_capacity(Self::MAX_HISTORY_SIZE),
         }
     }
 }
 
 
-fn setup_camera(mut commands: Commands<'_, '_>) {
+fn init_camera(mut commands: Commands<'_, '_>) {
     commands.spawn(PixelCameraBundle::from_resolution(
         config::window::WIDTH as i32,
         config::window::HEIGHT as i32,
@@ -221,7 +240,7 @@ fn check_asset_loading(
 }
 
 
-fn seed_life(mut world: ResMut<'_, Life>) {
+fn init_simulation(mut world: ResMut<'_, Simulation>) {
     world.cells.insert(IVec2::new(0, 0), true);
 
     world.cells.insert(IVec2::new(1, 0), true);
@@ -232,9 +251,9 @@ fn seed_life(mut world: ResMut<'_, Life>) {
 }
 
 
-fn spawn_cell_sprites(
+fn init_presentation(
     mut commands: Commands<'_, '_>,
-    world: Res<'_, Life>,
+    world: Res<'_, Simulation>,
     glyphs: Res<'_, GlyphAtlas>,
 ) {
     use config::cells::{DEAD_COLOR, LIVE_COLOR, SPRITE_SIZE};
@@ -276,18 +295,26 @@ fn spawn_cell_sprites(
 }
 
 
-fn tick_life_update_timer(
-    mut timer: ResMut<'_, LifeUpdateTimer>,
+fn tick_simulation_update_timer(
+    mut timer: ResMut<'_, SimulationUpdateTimer>,
     time: Res<'_, Time>,
-    mut ev_update: EventWriter<'_, LifeUpdateTickEvent>,
+    mut ev_trigger: EventWriter<'_, AdvanceSimTriggeredEvent>,
 ) {
     if timer.tick(time.delta()).finished() {
-        ev_update.send(LifeUpdateTickEvent);
+        ev_trigger.send(AdvanceSimTriggeredEvent);
     }
 }
 
+/// Reset simulation update timer.
+///
+/// Executed on entering the `GameState::Paused` state.
+fn reset_simulation_update_timer(mut timer: ResMut<'_, SimulationUpdateTimer>) {
+    timer.reset();
+}
 
-fn update_life(mut life: ResMut<'_, Life>) {
+
+/// Advance the simulation a single tick (generation).
+fn advance_simulation(simulation: ResMut<'_, Simulation>) {
     fn wrap(bounds: &IRect, xy: IVec2) -> IVec2 {
         let mut x = xy.x;
         let mut y = xy.y;
@@ -315,15 +342,22 @@ fn update_life(mut life: ResMut<'_, Life>) {
         IVec2 { x, y }
     }
 
+    // Re-borrow.
+    let simulation = simulation.into_inner();
 
     let mut next_gen: HashMap<IVec2, bool> = HashMap::with_capacity(
-        (life.bounds.width() * life.bounds.height())
+        (simulation.bounds.width() * simulation.bounds.height())
             .try_into()
             .unwrap(),
     );
 
-    for y in life.bounds.min.y..life.bounds.max.y {
-        for x in life.bounds.min.x..life.bounds.max.x {
+    let min_x = simulation.bounds.min.x;
+    let max_x = simulation.bounds.max.x;
+    let min_y = simulation.bounds.min.y;
+    let max_y = simulation.bounds.max.y;
+
+    for y in min_y..max_y {
+        for x in min_x..max_x {
             let pt = IVec2::new(x, y);
 
             // We count the number of life cells, including the inner cell, in the neighborhood
@@ -332,13 +366,13 @@ fn update_life(mut life: ResMut<'_, Life>) {
             // count is anything else, then the state of the inner cell is death.
 
             let mut count = 0;
-            if life.cells.get(&pt).copied().unwrap_or_default() {
+            if simulation.cells.get(&pt).copied().unwrap_or_default() {
                 count += 1;
             }
 
             for offset in NEIGHBOR_OFFSETS {
-                let pt = wrap(&life.bounds, pt + offset);
-                if life.cells.get(&pt).copied().unwrap_or_default() {
+                let pt = wrap(&simulation.bounds, pt + offset);
+                if simulation.cells.get(&pt).copied().unwrap_or_default() {
                     count += 1;
                 }
             }
@@ -350,7 +384,7 @@ fn update_life(mut life: ResMut<'_, Life>) {
                 }
                 4 => {
                     // Same. If cell was empty before, it was dead (`false`).
-                    next_gen.insert(pt, life.cells.get(&pt).copied().unwrap_or_default());
+                    next_gen.insert(pt, simulation.cells.get(&pt).copied().unwrap_or_default());
                 }
                 _ => {
                     // Death.
@@ -360,12 +394,28 @@ fn update_life(mut life: ResMut<'_, Life>) {
         }
     }
 
-    life.cells = next_gen;
+    if simulation.history.len() >= Simulation::MAX_HISTORY_SIZE {
+        simulation.history.pop_back();
+    }
+    simulation
+        .history
+        .push_front(std::mem::replace(&mut simulation.cells, next_gen));
 }
 
 
-fn update_cell_sprites(
-    world: Res<'_, Life>,
+/// Rewind the simulation a single tick (generation).
+fn rewind_simulation(mut simulation: ResMut<'_, Simulation>) {
+    let Some(prev_gen) = simulation.history.pop_front() else {
+        info!("History is empty.");
+        return;
+    };
+    simulation.cells = prev_gen;
+}
+
+
+/// Update the presentation.
+fn update_presentation(
+    world: Res<'_, Simulation>,
     mut q_sprites: Query<'_, '_, (&Position, &mut TextureAtlasSprite)>,
 ) {
     use config::cells::{DEAD_COLOR, LIVE_COLOR};
