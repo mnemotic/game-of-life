@@ -77,6 +77,7 @@ fn main() {
         .add_state::<GameState>()
         .add_event::<AdvanceSimTriggeredEvent>()
         .add_event::<RewindSimTriggeredEvent>()
+        .add_event::<PauseSimTriggeredEvent>()
         .add_plugins(
             DefaultPlugins
                 .set(WindowPlugin {
@@ -160,6 +161,11 @@ struct AdvanceSimTriggeredEvent;
 
 #[derive(Event)]
 struct RewindSimTriggeredEvent;
+
+#[derive(Event)]
+struct PauseSimTriggeredEvent {
+    pause: bool,
+}
 
 
 #[derive(Component, Deref)]
