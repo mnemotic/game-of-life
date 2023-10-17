@@ -14,7 +14,7 @@
 #![allow(clippy::must_use_candidate)]
 
 use std::collections::VecDeque;
-use std::ops::Neg;
+use std::ops::{Neg, Not};
 
 use ahash::AHashMap as HashMap;
 
@@ -23,6 +23,9 @@ use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 use bevy::math::IRect;
 use bevy::prelude::*;
 use bevy_pixel_camera::{PixelCameraBundle, PixelCameraPlugin};
+
+use input::ToggleCellTriggeredEvent;
+
 
 mod input;
 
@@ -39,6 +42,7 @@ mod config {
         pub const DEAD_COLOR: Color = Color::GRAY;
         pub const LIVE_COLOR: Color = Color::GREEN;
         pub const SPRITE_SIZE: Vec2 = Vec2::splat(20.0);
+        pub const OFFSET: Vec2 = Vec2::new(10.0, 10.0);
     }
 }
 
@@ -130,6 +134,12 @@ fn main() {
                 .run_if(on_event::<RewindSimTriggeredEvent>()),
         )
         .add_systems(OnEnter(GameState::Paused), reset_simulation_update_timer)
+        .add_systems(
+            Update,
+            (toggle_cell, update_presentation)
+                .chain()
+                .run_if(on_event::<ToggleCellTriggeredEvent>()),
+        )
         .run();
 }
 
@@ -169,7 +179,11 @@ struct PauseSimTriggeredEvent {
 
 
 #[derive(Component, Deref)]
-pub struct Position(pub IVec2);
+struct Position(pub IVec2);
+
+
+#[derive(Component)]
+struct MainCamera;
 
 
 #[derive(Resource)]
@@ -203,10 +217,13 @@ impl Simulation {
 
 
 fn init_camera(mut commands: Commands<'_, '_>) {
-    commands.spawn(PixelCameraBundle::from_resolution(
-        config::window::WIDTH as i32,
-        config::window::HEIGHT as i32,
-        true,
+    commands.spawn((
+        PixelCameraBundle::from_resolution(
+            config::window::WIDTH as i32,
+            config::window::HEIGHT as i32,
+            true,
+        ),
+        MainCamera,
     ));
 }
 
@@ -262,9 +279,7 @@ fn init_presentation(
     world: Res<'_, Simulation>,
     glyphs: Res<'_, GlyphAtlas>,
 ) {
-    use config::cells::{DEAD_COLOR, LIVE_COLOR, SPRITE_SIZE};
-
-    let offset = Vec2::new(10.0, 10.0);
+    use config::cells::{DEAD_COLOR, LIVE_COLOR, OFFSET, SPRITE_SIZE};
 
     for y in world.bounds.min.y..world.bounds.max.y {
         for x in world.bounds.min.x..world.bounds.max.x {
@@ -285,7 +300,7 @@ fn init_presentation(
             };
 
             let transform = Transform::from_translation(
-                (Vec2::new(x as f32, y as f32) * SPRITE_SIZE + offset).extend(0.0),
+                (Vec2::new(x as f32, y as f32) * SPRITE_SIZE + OFFSET).extend(0.0),
             );
             commands.spawn((
                 SpriteSheetBundle {
@@ -320,7 +335,15 @@ fn reset_simulation_update_timer(mut timer: ResMut<'_, SimulationUpdateTimer>) {
 
 
 /// Advance the simulation a single tick (generation).
-fn advance_simulation(simulation: ResMut<'_, Simulation>) {
+fn advance_simulation(life: ResMut<'_, Simulation>) {
+    /// Wrap:
+    /// ```
+    /// max_x -> min_x
+    /// min_x - 1 -> max_x - 1
+    /// max_y -> min_y
+    /// min_y - 1 -> max_y - 1
+    /// ```
+    /// Max value is wrapped to minimum because iteration range `min_x..max_x` doesn't include `max_x`.
     fn wrap(bounds: &IRect, xy: IVec2) -> IVec2 {
         let mut x = xy.x;
         let mut y = xy.y;
@@ -330,9 +353,9 @@ fn advance_simulation(simulation: ResMut<'_, Simulation>) {
 
         // Wrap horizontally.
         if x < min_x {
-            x = max_x - (x - min_x);
-        } else if x > max_x {
-            x = min_x + (x - max_x);
+            x = max_x - (x - min_x).abs();
+        } else if x >= max_x {
+            x = min_x + (x - max_x).abs();
         }
 
         let min_y = bounds.min.y;
@@ -340,27 +363,27 @@ fn advance_simulation(simulation: ResMut<'_, Simulation>) {
 
         // Wrap vertically.
         if y < min_y {
-            y = max_y - (y - min_y);
-        } else if y > max_y {
-            y = min_y + (y - max_y);
+            y = max_y - (y - min_y).abs();
+        } else if y >= max_y {
+            y = min_y + (y - max_y).abs();
         }
 
         IVec2 { x, y }
     }
 
     // Re-borrow.
-    let simulation = simulation.into_inner();
+    let life = life.into_inner();
 
     let mut next_gen: HashMap<IVec2, bool> = HashMap::with_capacity(
-        (simulation.bounds.width() * simulation.bounds.height())
+        (life.bounds.width() * life.bounds.height())
             .try_into()
             .unwrap(),
     );
 
-    let min_x = simulation.bounds.min.x;
-    let max_x = simulation.bounds.max.x;
-    let min_y = simulation.bounds.min.y;
-    let max_y = simulation.bounds.max.y;
+    let min_x = life.bounds.min.x;
+    let max_x = life.bounds.max.x;
+    let min_y = life.bounds.min.y;
+    let max_y = life.bounds.max.y;
 
     for y in min_y..max_y {
         for x in min_x..max_x {
@@ -372,13 +395,13 @@ fn advance_simulation(simulation: ResMut<'_, Simulation>) {
             // count is anything else, then the state of the inner cell is death.
 
             let mut count = 0;
-            if simulation.cells.get(&pt).copied().unwrap_or_default() {
+            if life.cells.get(&pt).copied().unwrap_or_default() {
                 count += 1;
             }
 
             for offset in NEIGHBOR_OFFSETS {
-                let pt = wrap(&simulation.bounds, pt + offset);
-                if simulation.cells.get(&pt).copied().unwrap_or_default() {
+                let pt = wrap(&life.bounds, pt + offset);
+                if life.cells.get(&pt).copied().unwrap_or_default() {
                     count += 1;
                 }
             }
@@ -390,7 +413,7 @@ fn advance_simulation(simulation: ResMut<'_, Simulation>) {
                 }
                 4 => {
                     // Same. If cell was empty before, it was dead (`false`).
-                    next_gen.insert(pt, simulation.cells.get(&pt).copied().unwrap_or_default());
+                    next_gen.insert(pt, life.cells.get(&pt).copied().unwrap_or_default());
                 }
                 _ => {
                     // Death.
@@ -400,39 +423,51 @@ fn advance_simulation(simulation: ResMut<'_, Simulation>) {
         }
     }
 
-    if simulation.history.len() >= Simulation::MAX_HISTORY_SIZE {
-        simulation.history.pop_back();
+    if life.history.len() >= Simulation::MAX_HISTORY_SIZE {
+        life.history.pop_back();
     }
-    simulation
-        .history
-        .push_front(std::mem::replace(&mut simulation.cells, next_gen));
+    life.history
+        .push_front(std::mem::replace(&mut life.cells, next_gen));
 }
 
 
 /// Rewind the simulation a single tick (generation).
-fn rewind_simulation(mut simulation: ResMut<'_, Simulation>) {
-    let Some(prev_gen) = simulation.history.pop_front() else {
+fn rewind_simulation(mut life: ResMut<'_, Simulation>) {
+    let Some(prev_gen) = life.history.pop_front() else {
         info!("History is empty.");
         return;
     };
-    simulation.cells = prev_gen;
+    life.cells = prev_gen;
 }
 
 
 /// Update the presentation.
 fn update_presentation(
-    world: Res<'_, Simulation>,
+    life: Res<'_, Simulation>,
     mut q_sprites: Query<'_, '_, (&Position, &mut TextureAtlasSprite)>,
 ) {
     use config::cells::{DEAD_COLOR, LIVE_COLOR};
 
     for (position, mut sprite) in &mut q_sprites {
-        if world.cells.get(&position.0).copied().unwrap_or_default() {
+        if life.cells.get(&position.0).copied().unwrap_or_default() {
             sprite.index = 254;
             sprite.color = LIVE_COLOR;
         } else {
             sprite.index = 255;
             sprite.color = DEAD_COLOR;
         }
+    }
+}
+
+
+fn toggle_cell(
+    mut life: ResMut<'_, Simulation>,
+    mut ev_toggle: EventReader<'_, '_, ToggleCellTriggeredEvent>,
+) {
+    for xy in &mut ev_toggle {
+        let Some(cell) = life.cells.get_mut(xy) else {
+            continue;
+        };
+        *cell = cell.not();
     }
 }

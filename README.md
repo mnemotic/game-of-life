@@ -9,7 +9,7 @@ Implemented and planned features.
 - [X] Pause / unpause the simulation.
 - [X] Advance and rewind the simulation a single tick (generation).
 - [ ] Basic world editing.
-    - [ ] Toggle a single cell (alive / dead).
+    - [X] Toggle a single cell (alive / dead).
     - [ ] Toggle a rectangular group of cells.
 - [ ] Increase / decrease simulation rate (speed).
 - [ ] Save / load.
@@ -22,8 +22,9 @@ Implemented and planned features.
 
 ## Controls
 
-| Key          | Action                                                            |
-|--------------|-------------------------------------------------------------------|
-| `Space`, `P` | Pause / unpause the simulation.                                   |
-| `]`          | Advance the simulation a single tick (generation) *while paused*. |
-| `[`          | Rewind the simulation a single tick (generation) *while paused*.  |
+| Key          | Action                                             |
+|--------------|----------------------------------------------------|
+| `Space`, `P` | Pause / unpause the simulation.                    |
+| `]`          | Advance the simulation a single tick (generation). |
+| `[`          | Rewind the simulation a single tick (generation).  |
+| `LMB`        | Toggle cell state.                                 |
