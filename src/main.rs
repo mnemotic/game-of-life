@@ -467,9 +467,10 @@ fn toggle_cell(
     mut ev_toggle: EventReader<'_, '_, ToggleCellTriggeredEvent>,
 ) {
     for xy in &mut ev_toggle {
-        let Some(cell) = life.cells.get_mut(xy) else {
-            continue;
-        };
-        *cell = cell.not();
+        if let Some(cell) = life.cells.get_mut(xy) {
+            *cell = cell.not();
+        } else {
+            life.cells.insert(**xy, true);
+        }
     }
 }
