@@ -1,6 +1,6 @@
 [package]
 name = "cgol"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "Conway's Game of Life in Bevy."
 authors = ["Martin Green"]
