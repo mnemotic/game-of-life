@@ -1019,6 +1019,7 @@ dependencies = [
  "bevy_framepace",
  "bevy_pixel_camera",
  "console_error_panic_hook",
+ "once_cell",
  "ordered-float",
  "priority-queue",
 ]

@@ -4,9 +4,8 @@
 
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
-use std::ops::Neg;
 
-use crate::config::cells::{OFFSET, SPRITE_SIZE};
+use crate::config::cells::{SPRITE_SIZE, SPRITE_WORLD_OFFSET};
 use crate::{
     AdvanceSimTriggeredEvent, GameState, MainCamera, PauseSimTriggeredEvent,
     RewindSimTriggeredEvent,
@@ -135,7 +134,7 @@ fn get_cursor_world_position(
     if let Some(position) = window.cursor_position().and_then(|cursor| {
         camera
             .viewport_to_world_2d(transform, cursor)
-            .map(|v| v + OFFSET.neg())
+            .map(|v| v + -SPRITE_WORLD_OFFSET)
     }) {
         *mouse_position = MouseWorldPosition(position);
     }
@@ -153,7 +152,7 @@ fn toggle_cell_on_lmb(
             (mouse_position.y / SPRITE_SIZE.y).round() as i32,
         );
 
-        info!("Clicked {xy:?}");
+        debug!("Clicked {xy:?}");
         ev_toggle.send(ToggleCellTriggeredEvent(xy));
     }
 }
