@@ -8,7 +8,7 @@ use bevy::window::PrimaryWindow;
 use crate::config::cells::{SPRITE_SIZE, SPRITE_WORLD_OFFSET};
 use crate::{
     AdvanceSimTriggeredEvent, GameState, MainCamera, PauseSimTriggeredEvent,
-    RewindSimTriggeredEvent, SimulationConfig, SimulationUpdateTimer,
+    RewindSimTriggeredEvent, SimulationConfig, SimulationUpdateTimer, WindowFocused,
 };
 
 
@@ -145,8 +145,17 @@ fn toggle_cell_on_lmb(
     buttons: Res<'_, Input<MouseButton>>,
     mouse_position: Res<'_, MouseWorldPosition>,
     mut ev_toggle: EventWriter<'_, ToggleCellTriggeredEvent>,
+    mut ev_focused: EventReader<'_, '_, WindowFocused>,
 ) {
     if buttons.just_pressed(MouseButton::Left) {
+        // Ignore input that caused the window to receive focus.
+        for event in &mut ev_focused {
+            if event.focused {
+                info!("Ignoring input due to receiving focus");
+                return;
+            }
+        }
+
         #[allow(clippy::cast_possible_truncation)]
         let xy = IVec2::new(
             (mouse_position.x / SPRITE_SIZE.x).round() as i32,

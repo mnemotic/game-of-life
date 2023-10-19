@@ -18,7 +18,6 @@ use std::collections::VecDeque;
 use ahash::AHashMap as HashMap;
 
 use bevy::asset::LoadState;
-// use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 use bevy::math::IRect;
 use bevy::prelude::*;
 use bevy_pixel_camera::{PixelCameraBundle, PixelCameraPlugin};
@@ -90,6 +89,17 @@ pub struct SimulationConfig {
 }
 
 
+#[derive(Default, Resource)]
+struct WindowFocus {
+    focused: bool,
+}
+
+#[derive(Event)]
+struct WindowFocused {
+    focused: bool,
+}
+
+
 fn main() {
     use bevy::window::close_on_esc;
 
@@ -116,6 +126,7 @@ fn main() {
         .add_event::<AdvanceSimTriggeredEvent>()
         .add_event::<RewindSimTriggeredEvent>()
         .add_event::<PauseSimTriggeredEvent>()
+        .add_event::<WindowFocused>()
         .add_plugins(
             DefaultPlugins
                 .set(WindowPlugin {
@@ -129,11 +140,7 @@ fn main() {
                 })
                 .set(ImagePlugin::default_nearest()),
         )
-        .add_plugins((
-            PixelCameraPlugin,
-            // LogDiagnosticsPlugin::default(),
-            // FrameTimeDiagnosticsPlugin,
-        ))
+        .add_plugins(PixelCameraPlugin)
         .add_plugins(input::InputPlugin)
         .add_systems(Startup, (init_camera, load_assets))
         .add_systems(
@@ -174,6 +181,7 @@ fn main() {
                 .chain()
                 .run_if(on_event::<ToggleCellTriggeredEvent>()),
         )
+        .add_systems(PreUpdate, track_window_focus)
         .run();
 }
 
@@ -526,5 +534,26 @@ fn toggle_cell(
         } else {
             life.cells.insert(**xy, Cell::default());
         }
+    }
+}
+
+
+fn track_window_focus(
+    mut focus: Local<'_, WindowFocus>,
+    mut ev_focused_bevy: EventReader<'_, '_, bevy::window::WindowFocused>,
+    mut ev_focused: EventWriter<'_, WindowFocused>,
+) {
+    let focused = focus.focused;
+
+    // Aggregate focus events.
+    for event in &mut ev_focused_bevy {
+        debug!("{event:?}");
+        focus.focused = event.focused;
+    }
+
+    if focus.focused != focused {
+        ev_focused.send(WindowFocused {
+            focused: focus.focused,
+        });
     }
 }
