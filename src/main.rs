@@ -22,7 +22,7 @@ use bevy::math::IRect;
 use bevy::prelude::*;
 use bevy_pixel_camera::{PixelCameraBundle, PixelCameraPlugin};
 
-use input::ToggleCellTriggeredEvent;
+use crate::input::InputAction;
 
 
 mod color_gradient;
@@ -84,9 +84,6 @@ fn main() {
             TimerMode::Repeating,
         )))
         .add_state::<GameState>()
-        .add_event::<AdvanceSimTriggeredEvent>()
-        .add_event::<RewindSimTriggeredEvent>()
-        .add_event::<PauseSimTriggeredEvent>()
         .add_event::<WindowFocused>()
         .add_plugins(
             DefaultPlugins
@@ -127,20 +124,20 @@ fn main() {
             Update,
             (advance_simulation, update_presentation)
                 .chain()
-                .run_if(on_event::<AdvanceSimTriggeredEvent>()),
+                .run_if(on_event::<InputAction>()),
         )
         .add_systems(
             Update,
             (rewind_simulation, update_presentation)
                 .chain()
-                .run_if(on_event::<RewindSimTriggeredEvent>()),
+                .run_if(on_event::<InputAction>()),
         )
         .add_systems(OnEnter(GameState::Paused), reset_simulation_update_timer)
         .add_systems(
             Update,
             (toggle_cell, update_presentation)
                 .chain()
-                .run_if(on_event::<ToggleCellTriggeredEvent>()),
+                .run_if(on_event::<InputAction>()),
         )
         .add_systems(PreUpdate, track_window_focus)
         .run();
@@ -167,18 +164,6 @@ struct GlyphAtlas(pub Handle<TextureAtlas>);
 
 #[derive(Resource, Deref, DerefMut)]
 struct SimulationUpdateTimer(Timer);
-
-
-#[derive(Event)]
-struct AdvanceSimTriggeredEvent;
-
-#[derive(Event)]
-struct RewindSimTriggeredEvent;
-
-#[derive(Event)]
-struct PauseSimTriggeredEvent {
-    pause: bool,
-}
 
 
 #[derive(Component, Deref)]
@@ -340,10 +325,11 @@ fn init_presentation(
 fn tick_simulation_update_timer(
     mut timer: ResMut<'_, SimulationUpdateTimer>,
     time: Res<'_, Time>,
-    mut ev_trigger: EventWriter<'_, AdvanceSimTriggeredEvent>,
+    mut actions: EventWriter<'_, InputAction>,
 ) {
     if timer.tick(time.delta()).finished() {
-        ev_trigger.send(AdvanceSimTriggeredEvent);
+        // @REVIEW: **Technically** not an *input* action.
+        actions.send(InputAction::AdvanceSimulation);
     }
 }
 
@@ -356,7 +342,7 @@ fn reset_simulation_update_timer(mut timer: ResMut<'_, SimulationUpdateTimer>) {
 
 
 /// Advance the simulation a single tick (generation).
-fn advance_simulation(life: ResMut<'_, Life>) {
+fn advance_simulation(life: ResMut<'_, Life>, mut actions: EventReader<'_, '_, InputAction>) {
     /// Wrap:
     /// ```
     /// max_x -> min_x
@@ -392,77 +378,86 @@ fn advance_simulation(life: ResMut<'_, Life>) {
         IVec2 { x, y }
     }
 
-    // Re-borrow.
     let life = life.into_inner();
-    debug!("Hash map capacity is {}", life.cells.capacity());
 
-    let mut next_gen: HashMap<IVec2, Cell> = HashMap::with_capacity(life.cells.capacity());
+    for action in &mut actions {
+        if let InputAction::AdvanceSimulation = action {
+            // Re-borrow.
+            debug!("Hash map capacity is {}", life.cells.capacity());
 
-    let min_x = life.bounds.min.x;
-    let max_x = life.bounds.max.x;
-    let min_y = life.bounds.min.y;
-    let max_y = life.bounds.max.y;
+            let mut next_gen: HashMap<IVec2, Cell> = HashMap::with_capacity(life.cells.capacity());
 
-    for y in min_y..max_y {
-        for x in min_x..max_x {
-            let pt = IVec2::new(x, y);
+            let min_x = life.bounds.min.x;
+            let max_x = life.bounds.max.x;
+            let min_y = life.bounds.min.y;
+            let max_y = life.bounds.max.y;
 
-            // We count the number of alive cells, including the inner cell, in the neighborhood
-            // of each cell. If the count is 3, then the state of the inner cell in the next generation
-            // is alive; if the count is 4, then the state of the inner cell remains the same; if the
-            // count is anything else, then the state of the inner cell is dead.
+            for y in min_y..max_y {
+                for x in min_x..max_x {
+                    let pt = IVec2::new(x, y);
 
-            // Extend `NEIGHBOR_OFFSET` with a invariant offset for the inner cell.
-            let offsets = NEIGHBOR_OFFSETS
-                .iter()
-                .chain([IVec2 { x: 0, y: 0 }].iter())
-                .collect::<Vec<_>>();
+                    // We count the number of alive cells, including the inner cell, in the neighborhood
+                    // of each cell. If the count is 3, then the state of the inner cell in the next generation
+                    // is alive; if the count is 4, then the state of the inner cell remains the same; if the
+                    // count is anything else, then the state of the inner cell is dead.
 
-            let mut count = 0;
-            for offset in offsets {
-                let pt = wrap(&life.bounds, pt + *offset);
-                if let Some(cell) = life.cells.get(&pt) {
-                    if cell.alive {
-                        count += 1;
+                    // Extend `NEIGHBOR_OFFSET` with a invariant offset for the inner cell.
+                    let offsets = NEIGHBOR_OFFSETS
+                        .iter()
+                        .chain([IVec2 { x: 0, y: 0 }].iter())
+                        .collect::<Vec<_>>();
+
+                    let mut count = 0;
+                    for offset in offsets {
+                        let pt = wrap(&life.bounds, pt + *offset);
+                        if let Some(cell) = life.cells.get(&pt) {
+                            if cell.alive {
+                                count += 1;
+                            }
+                        }
+                    }
+
+                    match count {
+                        3 => {
+                            // Cell at `pt` either stays alive or spawns new life.
+                            if let Some(cell) = life.cells.get(&pt) {
+                                next_gen.insert(pt, Cell::new(cell.alive, cell.age + 1));
+                            } else {
+                                next_gen.insert(pt, Cell::default());
+                            }
+                        }
+                        4 => {
+                            // Existing cells stay as they were.
+                            if let Some(cell) = life.cells.get(&pt) {
+                                next_gen.insert(pt, Cell::new(cell.alive, cell.age + 1));
+                            }
+                        }
+                        _ => {} // Cell at `pt` dies.
                     }
                 }
             }
 
-            match count {
-                3 => {
-                    // Cell at `pt` either stays alive or spawns new life.
-                    if let Some(cell) = life.cells.get(&pt) {
-                        next_gen.insert(pt, Cell::new(cell.alive, cell.age + 1));
-                    } else {
-                        next_gen.insert(pt, Cell::default());
-                    }
-                }
-                4 => {
-                    // Existing cells stay as they were.
-                    if let Some(cell) = life.cells.get(&pt) {
-                        next_gen.insert(pt, Cell::new(cell.alive, cell.age + 1));
-                    }
-                }
-                _ => {} // Cell at `pt` dies.
+            if life.history.len() >= Life::MAX_HISTORY_SIZE {
+                life.history.pop_back();
             }
+            life.history
+                .push_front(std::mem::replace(&mut life.cells, next_gen));
         }
     }
-
-    if life.history.len() >= Life::MAX_HISTORY_SIZE {
-        life.history.pop_back();
-    }
-    life.history
-        .push_front(std::mem::replace(&mut life.cells, next_gen));
 }
 
 
 /// Rewind the simulation a single tick (generation).
-fn rewind_simulation(mut life: ResMut<'_, Life>) {
-    let Some(prev_gen) = life.history.pop_front() else {
-        info!("History is empty");
-        return;
-    };
-    life.cells = prev_gen;
+fn rewind_simulation(mut life: ResMut<'_, Life>, mut actions: EventReader<'_, '_, InputAction>) {
+    for action in &mut actions {
+        if let InputAction::RewindSimulation = action {
+            let Some(prev_gen) = life.history.pop_front() else {
+                info!("History is empty");
+                return;
+            };
+            life.cells = prev_gen;
+        }
+    }
 }
 
 
@@ -485,15 +480,14 @@ fn update_presentation(
 }
 
 
-fn toggle_cell(
-    mut life: ResMut<'_, Life>,
-    mut ev_toggle: EventReader<'_, '_, ToggleCellTriggeredEvent>,
-) {
-    for xy in &mut ev_toggle {
-        if life.cells.contains_key(xy) {
-            life.cells.remove(xy);
-        } else {
-            life.cells.insert(**xy, Cell::default());
+fn toggle_cell(mut life: ResMut<'_, Life>, mut actions: EventReader<'_, '_, InputAction>) {
+    for action in &mut actions {
+        if let InputAction::ToggleCell(xy) = action {
+            if life.cells.contains_key(xy) {
+                life.cells.remove(xy);
+            } else {
+                life.cells.insert(*xy, Cell::default());
+            }
         }
     }
 }
