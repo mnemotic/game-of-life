@@ -83,7 +83,11 @@ const NEIGHBOR_OFFSETS: [IVec2; 8] = [
     IVec2 { x: -1, y: 1 },
 ];
 
-const SIMULATION_RATE: f32 = 1.0 / 2.0;
+
+#[derive(Resource)]
+pub struct SimulationConfig {
+    ticks_per_second: i32,
+}
 
 
 fn main() {
@@ -96,13 +100,16 @@ fn main() {
     let width = config::window::WIDTH;
     let height = config::window::HEIGHT;
 
+    let ticks_per_second = 2;
+
     App::new()
         .init_resource::<GameAssets>()
         .insert_resource(Msaa::Off)
         .insert_resource(ClearColor(Color::BLACK))
         .insert_resource(Life::new(width / 20, height / 20))
+        .insert_resource(SimulationConfig { ticks_per_second })
         .insert_resource(SimulationUpdateTimer(Timer::from_seconds(
-            SIMULATION_RATE,
+            1.0 / ticks_per_second as f32,
             TimerMode::Repeating,
         )))
         .add_state::<GameState>()

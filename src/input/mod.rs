@@ -8,7 +8,7 @@ use bevy::window::PrimaryWindow;
 use crate::config::cells::{SPRITE_SIZE, SPRITE_WORLD_OFFSET};
 use crate::{
     AdvanceSimTriggeredEvent, GameState, MainCamera, PauseSimTriggeredEvent,
-    RewindSimTriggeredEvent,
+    RewindSimTriggeredEvent, SimulationConfig, SimulationUpdateTimer,
 };
 
 
@@ -42,7 +42,8 @@ impl Plugin for InputPlugin {
             .add_systems(
                 Update,
                 (get_cursor_world_position, toggle_cell_on_lmb).chain(),
-            );
+            )
+            .add_systems(Update, change_simulation_rate);
     }
 }
 
@@ -154,5 +155,28 @@ fn toggle_cell_on_lmb(
 
         debug!("Clicked {xy:?}");
         ev_toggle.send(ToggleCellTriggeredEvent(xy));
+    }
+}
+
+
+fn change_simulation_rate(
+    keys: Res<'_, Input<KeyCode>>,
+    mut config: ResMut<'_, SimulationConfig>,
+    mut timer: ResMut<'_, SimulationUpdateTimer>,
+) {
+    let mut tps = config.ticks_per_second;
+    if keys.just_pressed(KeyCode::Minus) {
+        tps -= 1;
+    }
+    if keys.just_pressed(KeyCode::Equals) {
+        tps += 1;
+    }
+    tps = tps.clamp(1, 64);
+
+    if tps != config.ticks_per_second {
+        debug!("TPS changed: {} -> {}", config.ticks_per_second, tps);
+
+        config.ticks_per_second = tps;
+        *timer = SimulationUpdateTimer(Timer::from_seconds(1.0 / tps as f32, TimerMode::Repeating));
     }
 }

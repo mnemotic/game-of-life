@@ -11,7 +11,7 @@ Implemented and planned features.
 - [ ] Basic world editing.
     - [X] Toggle a single cell (alive / dead).
     - [ ] Toggle a rectangular group of cells.
-- [ ] Increase / decrease simulation rate (speed).
+- [X] Increase / decrease simulation rate (speed).
 - [ ] Save / load.
 - [ ] GUI.
     - [ ] World, cell, and simulation statistics.
@@ -28,3 +28,5 @@ Implemented and planned features.
 | `]`          | Advance the simulation a single tick (generation). |
 | `[`          | Rewind the simulation a single tick (generation).  |
 | `LMB`        | Toggle cell state.                                 |
+| `-`          | Decrease simulation rate (speed).                  |
+| `=`          | Increase simulation rate (speed).                  |
