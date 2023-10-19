@@ -514,8 +514,8 @@ fn toggle_cell(
     mut ev_toggle: EventReader<'_, '_, ToggleCellTriggeredEvent>,
 ) {
     for xy in &mut ev_toggle {
-        if let Some(cell) = life.cells.get_mut(xy) {
-            cell.alive = !cell.alive;
+        if life.cells.contains_key(xy) {
+            life.cells.remove(xy);
         } else {
             life.cells.insert(**xy, Cell::default());
         }
