@@ -16,13 +16,14 @@
 use std::collections::VecDeque;
 
 use ahash::AHashMap as HashMap;
-use bevy::asset::LoadState;
 use bevy::math::IRect;
 use bevy::prelude::*;
 
+use crate::assets::GlyphAtlas;
 use crate::input::InputAction;
 
 
+mod assets;
 mod camera;
 mod color_gradient;
 mod config;
@@ -72,7 +73,6 @@ fn main() {
     let tps = config::sim::DEFAULT_TICKS_PER_SECOND;
 
     App::new()
-        .init_resource::<GameAssets>()
         .insert_resource(Msaa::Off)
         .insert_resource(ClearColor(Color::BLACK))
         .insert_resource(Life::new(width / 20, height / 20))
@@ -101,16 +101,12 @@ fn main() {
         .add_plugins(input::InputPlugin)
         .add_plugins(ui::UiPlugin)
         .add_plugins(camera::CameraPlugin)
-        .add_systems(Startup, load_assets)
+        .add_plugins(assets::AssetPlugin)
         .add_systems(
             Startup,
             |mut next_state: ResMut<'_, NextState<GameState>>| next_state.set(GameState::Startup),
         )
         .add_systems(PreUpdate, track_window_focus)
-        .add_systems(
-            Update,
-            check_asset_loading.run_if(in_state(GameState::Startup)),
-        )
         .add_systems(
             OnEnter(GameState::Running),
             (init_simulation, init_presentation)
@@ -153,14 +149,6 @@ enum GameState {
     Running,
     Paused,
 }
-
-
-#[derive(Default, Resource, Deref, DerefMut)]
-struct GameAssets(pub Vec<HandleUntyped>);
-
-
-#[derive(Resource, Deref, DerefMut)]
-struct GlyphAtlas(pub Handle<TextureAtlas>);
 
 
 #[derive(Resource, Deref, DerefMut)]
@@ -217,41 +205,6 @@ impl Life {
             history: VecDeque::with_capacity(Self::MAX_HISTORY_SIZE),
             generation: 0,
         }
-    }
-}
-
-
-fn load_assets(
-    mut commands: Commands<'_, '_>,
-    asset_server: Res<'_, AssetServer>,
-    mut assets: ResMut<'_, GameAssets>,
-    mut texture_atlases: ResMut<'_, Assets<TextureAtlas>>,
-) {
-    const FONTSHEET_PATH: &str = "cp437_10x10.png";
-
-    let fontsheet = asset_server.load(FONTSHEET_PATH);
-    assets.push(fontsheet.clone_untyped());
-
-    let atlas = TextureAtlas::from_grid(fontsheet, Vec2::splat(10.0), 16, 16, None, None);
-    commands.insert_resource(GlyphAtlas(texture_atlases.add(atlas)));
-}
-
-
-fn check_asset_loading(
-    asset_server: Res<'_, AssetServer>,
-    assets: Res<'_, GameAssets>,
-    mut next_state: ResMut<'_, NextState<GameState>>,
-) {
-    match asset_server.get_group_load_state(assets.iter().map(HandleUntyped::id)) {
-        LoadState::Loading => {
-            info!("Loading assets...");
-        }
-        LoadState::Loaded => {
-            info!("Assets loaded");
-            next_state.set(GameState::Running);
-        }
-        LoadState::Failed => panic!("Failed to load assets"),
-        _ => {}
     }
 }
 
