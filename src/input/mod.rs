@@ -7,7 +7,8 @@ use bevy::window::PrimaryWindow;
 
 use crate::camera::MainCamera;
 use crate::config::cells::{SPRITE_SIZE, SPRITE_WORLD_OFFSET};
-use crate::{GameState, SimulationConfig, SimulationUpdateTimer, WindowFocused};
+use crate::game::{SimulationConfig, SimulationUpdateTimer};
+use crate::{GameState, WindowFocused};
 
 
 #[derive(Default, Resource, Deref, DerefMut)]
