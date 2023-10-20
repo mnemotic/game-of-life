@@ -41,8 +41,6 @@ struct WindowFocused {
 
 
 fn main() {
-    use bevy::window::close_on_esc;
-
     // @REVIEW: See <https://github.com/bevy-cheatbook/bevy-cheatbook/issues/196>.
     #[cfg(target_arch = "wasm32")]
     console_error_panic_hook::set_once();
@@ -83,7 +81,6 @@ fn main() {
             OnEnter(GameState::Running),
             init_presentation.after(GameLogicSet).run_if(run_once()),
         )
-        .add_systems(Update, close_on_esc) // @TODO: Move to input.
         .add_systems(Update, update_presentation.after(GameLogicSet))
         .run();
 }
