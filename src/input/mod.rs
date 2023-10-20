@@ -3,7 +3,7 @@
 //
 
 use bevy::prelude::*;
-use bevy::window::PrimaryWindow;
+use bevy::window::{close_on_esc, PrimaryWindow};
 
 use crate::camera::MainCamera;
 use crate::config::cells::{SPRITE_SIZE, SPRITE_WORLD_OFFSET};
@@ -32,6 +32,7 @@ impl Plugin for InputPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<CursorWorldPosition>()
             .add_event::<InputAction>()
+            .add_systems(Update, close_on_esc)
             .add_systems(
                 Update,
                 (
