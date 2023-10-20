@@ -7,8 +7,9 @@ use bevy_egui::egui::Layout;
 use bevy_egui::{egui, EguiContexts, EguiPlugin};
 use egui_extras::{Size, StripBuilder};
 
+use crate::game::{Life, SimulationConfig, SimulationUpdateTimer};
 use crate::input::InputAction;
-use crate::{ui, GameState, Life, SimulationConfig, SimulationUpdateTimer};
+use crate::{ui, GameState};
 
 
 pub mod widgets;
