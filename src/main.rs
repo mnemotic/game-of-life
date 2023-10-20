@@ -257,13 +257,17 @@ fn check_asset_loading(
 
 
 fn init_simulation(mut world: ResMut<'_, Life>) {
+    // "Butterfly" pattern.
+    world.cells.insert(IVec2::new(0, 3), Cell::default());
+    world.cells.insert(IVec2::new(0, 2), Cell::default());
+    world.cells.insert(IVec2::new(0, 1), Cell::default());
     world.cells.insert(IVec2::new(0, 0), Cell::default());
+    world.cells.insert(IVec2::new(0, -1), Cell::default());
+    world.cells.insert(IVec2::new(0, -2), Cell::default());
+    world.cells.insert(IVec2::new(0, -3), Cell::default());
 
     world.cells.insert(IVec2::new(1, 0), Cell::default());
     world.cells.insert(IVec2::new(-1, 0), Cell::default());
-
-    world.cells.insert(IVec2::new(0, 1), Cell::default());
-    world.cells.insert(IVec2::new(0, -1), Cell::default());
 }
 
 
