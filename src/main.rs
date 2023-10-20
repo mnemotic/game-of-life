@@ -16,7 +16,6 @@
 use std::collections::VecDeque;
 
 use ahash::AHashMap as HashMap;
-
 use bevy::asset::LoadState;
 use bevy::math::IRect;
 use bevy::prelude::*;
@@ -28,6 +27,7 @@ use crate::input::InputAction;
 mod color_gradient;
 mod config;
 mod input;
+mod ui;
 
 
 const NEIGHBOR_OFFSETS: [IVec2; 8] = [
@@ -100,11 +100,13 @@ fn main() {
         )
         .add_plugins(PixelCameraPlugin)
         .add_plugins(input::InputPlugin)
+        .add_plugins(ui::UiPlugin)
         .add_systems(Startup, (init_camera, load_assets))
         .add_systems(
             Startup,
             |mut next_state: ResMut<'_, NextState<GameState>>| next_state.set(GameState::Startup),
         )
+        .add_systems(PreUpdate, track_window_focus)
         .add_systems(
             Update,
             check_asset_loading.run_if(in_state(GameState::Startup)),
@@ -139,7 +141,6 @@ fn main() {
                 .chain()
                 .run_if(on_event::<InputAction>()),
         )
-        .add_systems(PreUpdate, track_window_focus)
         .run();
 }
 
@@ -198,6 +199,7 @@ pub struct Life {
     pub bounds: IRect,
     pub history: VecDeque<HashMap<IVec2, Cell>>,
     pub cells: HashMap<IVec2, Cell>,
+    pub generation: usize,
 }
 
 impl Life {
@@ -217,6 +219,7 @@ impl Life {
             bounds: IRect::from_corners(min, max),
             cells: HashMap::new(),
             history: VecDeque::with_capacity(Self::MAX_HISTORY_SIZE),
+            generation: 0,
         }
     }
 }
@@ -350,7 +353,8 @@ fn advance_simulation(life: ResMut<'_, Life>, mut actions: EventReader<'_, '_, I
     /// max_y -> min_y
     /// min_y - 1 -> max_y - 1
     /// ```
-    /// Max value is wrapped to minimum because iteration range `min_x..max_x` doesn't include `max_x`.
+    /// Max value is wrapped to minimum because iteration range `min_x..max_x` doesn't include
+    /// `max_x`.
     fn wrap(bounds: &IRect, xy: IVec2) -> IVec2 {
         let mut x = xy.x;
         let mut y = xy.y;
@@ -396,10 +400,11 @@ fn advance_simulation(life: ResMut<'_, Life>, mut actions: EventReader<'_, '_, I
                 for x in min_x..max_x {
                     let pt = IVec2::new(x, y);
 
-                    // We count the number of alive cells, including the inner cell, in the neighborhood
-                    // of each cell. If the count is 3, then the state of the inner cell in the next generation
-                    // is alive; if the count is 4, then the state of the inner cell remains the same; if the
-                    // count is anything else, then the state of the inner cell is dead.
+                    // We count the number of alive cells, including the inner cell, in the
+                    // neighborhood of each cell. If the count is 3, then the  state of the inner
+                    // cell in the next generation is alive; if the count is 4, then the state of
+                    // the inner cell remains the same; if the count is anything else, then the
+                    // state of the inner cell is dead.
 
                     // Extend `NEIGHBOR_OFFSET` with a invariant offset for the inner cell.
                     let offsets = NEIGHBOR_OFFSETS
@@ -442,6 +447,7 @@ fn advance_simulation(life: ResMut<'_, Life>, mut actions: EventReader<'_, '_, I
             }
             life.history
                 .push_front(std::mem::replace(&mut life.cells, next_gen));
+            life.generation += 1;
         }
     }
 }
@@ -456,6 +462,7 @@ fn rewind_simulation(mut life: ResMut<'_, Life>, mut actions: EventReader<'_, '_
                 return;
             };
             life.cells = prev_gen;
+            life.generation -= 1;
         }
     }
 }

@@ -140,7 +140,8 @@ fn get_cursor_world_position(
     let (camera, transform) = q_camera.single();
     let window = q_window.single();
 
-    // @NOTE: Sprites are offset by `OFFSET`. We need to offset the cursor position by `OFFSET.neg()`.
+    // @NOTE: Sprites are offset by `OFFSET`. We need to offset the cursor position by
+    // `OFFSET.neg()`.
     if let Some(position) = window.cursor_position().and_then(|cursor| {
         camera
             .viewport_to_world_2d(transform, cursor)

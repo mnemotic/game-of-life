@@ -15,7 +15,7 @@ Implemented and planned features.
 - [ ] Save / load.
 - [ ] GUI.
     - [ ] World, cell, and simulation statistics.
-    - [ ] Visual controls.
+    - [X] Visual controls.
 - [ ] Advanced editing.
     - [ ] Pattern library.
     - [ ] Undo / redo.
