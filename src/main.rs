@@ -19,11 +19,11 @@ use ahash::AHashMap as HashMap;
 use bevy::asset::LoadState;
 use bevy::math::IRect;
 use bevy::prelude::*;
-use bevy_pixel_camera::{PixelCameraBundle, PixelCameraPlugin};
 
 use crate::input::InputAction;
 
 
+mod camera;
 mod color_gradient;
 mod config;
 mod input;
@@ -98,10 +98,10 @@ fn main() {
                 })
                 .set(ImagePlugin::default_nearest()),
         )
-        .add_plugins(PixelCameraPlugin)
         .add_plugins(input::InputPlugin)
         .add_plugins(ui::UiPlugin)
-        .add_systems(Startup, (init_camera, load_assets))
+        .add_plugins(camera::CameraPlugin)
+        .add_systems(Startup, load_assets)
         .add_systems(
             Startup,
             |mut next_state: ResMut<'_, NextState<GameState>>| next_state.set(GameState::Startup),
@@ -171,10 +171,6 @@ struct SimulationUpdateTimer(Timer);
 struct Position(pub IVec2);
 
 
-#[derive(Component)]
-struct MainCamera;
-
-
 #[derive(Copy, Clone)]
 pub struct Cell {
     alive: bool,
@@ -222,18 +218,6 @@ impl Life {
             generation: 0,
         }
     }
-}
-
-
-fn init_camera(mut commands: Commands<'_, '_>) {
-    commands.spawn((
-        PixelCameraBundle::from_resolution(
-            config::window::WIDTH as i32,
-            config::window::HEIGHT as i32,
-            true,
-        ),
-        MainCamera,
-    ));
 }
 
 
