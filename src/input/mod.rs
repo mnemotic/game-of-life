@@ -3,11 +3,11 @@
 //
 
 use bevy::prelude::*;
-use bevy::window::{close_on_esc, PrimaryWindow};
+use bevy::window::PrimaryWindow;
 
 use crate::camera::MainCamera;
 use crate::config::cells::{SPRITE_SIZE, SPRITE_WORLD_OFFSET};
-use crate::game::{SimulationConfig, SimulationUpdateTimer};
+use crate::game::{GameLogicSet, SimulationConfig, SimulationUpdateTimer};
 use crate::{GameState, WindowFocused};
 
 
@@ -32,24 +32,24 @@ impl Plugin for InputPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<CursorWorldPosition>()
             .add_event::<InputAction>()
-            .add_systems(Update, close_on_esc)
             .add_systems(
                 Update,
                 (
+                    bevy::window::close_on_esc,
+                    (get_cursor_world_position, toggle_cell_on_lmb).chain(),
                     (
-                        toggle_pause_simulation_on_key,
-                        advance_simulation_on_key,
-                        rewind_simulation_on_key,
-                    ),
-                    toggle_simulation_paused,
+                        (
+                            toggle_pause_simulation_on_key,
+                            advance_simulation_on_key,
+                            rewind_simulation_on_key,
+                            change_simulation_rate_on_key,
+                        ),
+                        toggle_simulation_paused,
+                    )
+                        .chain(),
                 )
-                    .chain(),
-            )
-            .add_systems(
-                Update,
-                (get_cursor_world_position, toggle_cell_on_lmb).chain(),
-            )
-            .add_systems(Update, change_simulation_rate);
+                    .before(GameLogicSet),
+            );
     }
 }
 
@@ -181,7 +181,7 @@ fn toggle_cell_on_lmb(
 }
 
 
-fn change_simulation_rate(
+fn change_simulation_rate_on_key(
     keys: Res<'_, Input<KeyCode>>,
     mut config: ResMut<'_, SimulationConfig>,
     mut timer: ResMut<'_, SimulationUpdateTimer>,

@@ -30,20 +30,18 @@ impl Plugin for GamePlugin {
             TimerMode::Repeating,
         )))
         .configure_set(OnEnter(GameState::Running), GameLogicSet)
-        .configure_set(Update, GameLogicSet)
+        .configure_set(Update, GameLogicSet.run_if(on_event::<InputAction>()))
         .add_systems(
             OnEnter(GameState::Running),
             setup_simulation.in_set(GameLogicSet).run_if(run_once()),
         )
         .add_systems(
             Update,
-            tick_simulation_update_timer.run_if(in_state(GameState::Running)),
+            (advance_simulation, rewind_simulation, toggle_cell).in_set(GameLogicSet),
         )
         .add_systems(
             Update,
-            (advance_simulation, rewind_simulation, toggle_cell)
-                .in_set(GameLogicSet)
-                .run_if(on_event::<InputAction>()),
+            tick_simulation_update_timer.run_if(in_state(GameState::Running)),
         )
         .add_systems(OnEnter(GameState::Paused), reset_simulation_update_timer);
     }
