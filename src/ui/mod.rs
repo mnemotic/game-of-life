@@ -57,6 +57,8 @@ fn draw_controls_ui(
                     let mut tps = config.ticks_per_second;
                     ui.label("Speed (tps)")
                         .on_hover_text_at_pointer("Ticks per second.");
+
+                    #[allow(clippy::cast_precision_loss)]
                     if ui.add(egui::Slider::new(&mut tps, 1..=64)).changed() {
                         config.ticks_per_second = tps;
                         *timer = SimulationUpdateTimer(Timer::from_seconds(

@@ -4,12 +4,11 @@
 
 #![forbid(unsafe_code)]
 #![deny(rust_2018_idioms)]
-#![deny(clippy::disallowed_types, clippy::missing_enforced_import_renames)]
+#![deny(clippy::disallowed_types)]
+#![deny(clippy::missing_enforced_import_renames)]
 #![warn(clippy::pedantic)]
 #![allow(clippy::needless_pass_by_value)]
 #![allow(clippy::module_name_repetitions)]
-#![allow(clippy::cast_precision_loss)]
-#![allow(clippy::cast_possible_wrap)]
 #![allow(clippy::missing_panics_doc)]
 #![allow(clippy::must_use_candidate)]
 
@@ -48,6 +47,7 @@ fn main() {
     let width = config::window::WIDTH;
     let height = config::window::HEIGHT;
 
+    #[allow(clippy::cast_precision_loss)]
     App::new()
         .insert_resource(Msaa::Off)
         .insert_resource(ClearColor(Color::BLACK))
@@ -125,6 +125,7 @@ fn init_presentation(
                 }
             };
 
+            #[allow(clippy::cast_precision_loss)]
             let transform = Transform::from_translation(
                 (Vec2::new(x as f32, y as f32) * SPRITE_SIZE + SPRITE_WORLD_OFFSET).extend(0.0),
             );

@@ -37,6 +37,7 @@ pub mod cells {
             gradient
         });
 
+        #[allow(clippy::cast_precision_loss)]
         GRADIENT.sample((age as f32) / 10.0)
     }
 }
