@@ -19,6 +19,9 @@ jobs:
   release-wasm:
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: write
+
     steps:
       - uses: tj-actions/branch-names@v7
         id: get-tag-name
@@ -28,6 +31,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@nightly
         with:
           targets: wasm32-unknown-unknown
+
       - name: Install wasm-bindgen-cli
         run: |
           cargo install --locked wasm-bindgen-cli
@@ -70,6 +74,9 @@ jobs:
   release-linux:
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: write
+
     steps:
       - uses: tj-actions/branch-names@v7
         id: get-tag-name
@@ -79,6 +86,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@nightly
         with:
           targets: x86_64-unknown-linux-gnu
+
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -120,6 +128,9 @@ jobs:
   # Build for Windows.
   release-windows:
     runs-on: windows-latest
+
+    permissions:
+      contents: write
 
     steps:
       - uses: tj-actions/branch-names@v7
