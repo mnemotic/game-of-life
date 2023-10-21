@@ -3,7 +3,6 @@
 //
 
 use bevy::prelude::*;
-
 use ordered_float::OrderedFloat;
 
 
@@ -55,7 +54,8 @@ impl ColorGradient {
                 assert!(point > left.point);
                 assert!(point < right.point);
 
-                // Remap the sampling point into the range between `left` and `right` for interpolation.
+                // Remap the sampling point into the range between `left` and `right` for
+                // interpolation.
                 Color::from(Vec4::from(left.value).lerp(
                     Vec4::from(right.value),
                     ((point - left.point) / (right.point - left.point)).into(),
