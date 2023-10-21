@@ -1,3 +1,5 @@
+# @CREDIT: <https://github.com/bevyengine/bevy_github_ci_template/blob/main/.github/workflows/release.yaml>
+
 name: Release
 
 on:
