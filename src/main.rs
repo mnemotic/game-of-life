@@ -2,6 +2,7 @@
 // Copyright (c) 2023 Martin Green. All rights reserved.
 //
 
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 #![forbid(unsafe_code)]
 #![deny(rust_2018_idioms)]
 #![deny(clippy::disallowed_types)]
