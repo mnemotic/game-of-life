@@ -10,7 +10,6 @@ pub mod window {
 pub mod cells {
     use bevy::math::Vec2;
     use bevy::prelude::Color;
-
     use once_cell::sync::Lazy;
 
     use crate::color_gradient::{ColorGradient, ColorPoint};
