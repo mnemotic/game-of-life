@@ -28,6 +28,8 @@ jobs:
         with:
           strip_tag_prefix: v
       - uses: actions/checkout@v4
+        with:
+          lfs: true
       - uses: dtolnay/rust-toolchain@nightly
         with:
           targets: wasm32-unknown-unknown
@@ -83,6 +85,8 @@ jobs:
         with:
           strip_tag_prefix: v
       - uses: actions/checkout@v4
+        with:
+          lfs: true
       - uses: dtolnay/rust-toolchain@nightly
         with:
           targets: x86_64-unknown-linux-gnu
@@ -138,6 +142,8 @@ jobs:
         with:
           strip_tag_prefix: v
       - uses: actions/checkout@v4
+        with:
+          lfs: true
       - uses: dtolnay/rust-toolchain@nightly
         with:
           targets: x86_64-pc-windows-msvc
