@@ -1,5 +1,5 @@
 [package]
-name = "cgol"
+name = "game-of-life"
 version = "0.1.6"
 edition = "2021"
 description = "Conway's Game of Life in Bevy."
