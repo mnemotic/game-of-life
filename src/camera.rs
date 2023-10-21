@@ -23,6 +23,7 @@ impl Plugin for CameraPlugin {
 
 
 fn setup_camera(mut commands: Commands<'_, '_>) {
+    #[allow(clippy::cast_possible_wrap)]
     commands.spawn((
         PixelCameraBundle::from_resolution(
             config::window::WIDTH as i32,

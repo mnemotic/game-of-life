@@ -195,6 +195,7 @@ fn change_simulation_rate_on_key(
     }
     tps = tps.clamp(1, 64);
 
+    #[allow(clippy::cast_precision_loss)]
     if tps != config.ticks_per_second {
         debug!("TPS changed: {} -> {}", config.ticks_per_second, tps);
 

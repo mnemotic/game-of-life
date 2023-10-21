@@ -22,6 +22,7 @@ impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
         let tps = config::sim::DEFAULT_TICKS_PER_SECOND;
 
+        #[allow(clippy::cast_precision_loss)]
         app.insert_resource(SimulationConfig {
             ticks_per_second: tps,
         })
@@ -100,6 +101,7 @@ pub struct Life {
 impl Life {
     pub const MAX_HISTORY_SIZE: usize = 32;
 
+    #[allow(clippy::cast_possible_wrap)]
     pub fn new(width: u32, height: u32) -> Self {
         let half_width = (width / 2) as i32;
         let half_height = (height / 2) as i32;
