@@ -75,8 +75,8 @@ impl Default for ColorGradient {
         // Opaque black to opaque white gradient.
         Self {
             points: vec![
-                ColorPoint::new(0.0, Color::rgba_linear(0.0, 0.0, 0.0, 1.0)),
-                ColorPoint::new(1.0, Color::rgba_linear(1.0, 1.0, 1.0, 1.0)),
+                ColorPoint::new(0.0, Color::rgba(0.0, 0.0, 0.0, 1.0)),
+                ColorPoint::new(1.0, Color::rgba(1.0, 1.0, 1.0, 1.0)),
             ],
         }
     }
@@ -108,44 +108,35 @@ mod tests {
     pub fn test_default_gradient() {
         let gradient = ColorGradient::default();
 
-        assert_eq!(gradient.sample(0.0), Color::rgba_linear(0.0, 0.0, 0.0, 1.0));
-        assert_eq!(gradient.sample(0.5), Color::rgba_linear(0.5, 0.5, 0.5, 1.0));
-        assert_eq!(gradient.sample(1.0), Color::rgba_linear(1.0, 1.0, 1.0, 1.0));
+        assert_eq!(gradient.sample(0.0), Color::rgba(0.0, 0.0, 0.0, 1.0));
+        assert_eq!(gradient.sample(0.5), Color::rgba(0.5, 0.5, 0.5, 1.0));
+        assert_eq!(gradient.sample(1.0), Color::rgba(1.0, 1.0, 1.0, 1.0));
     }
 
     #[test]
     pub fn test_custom_gradient() {
         let mut gradient = ColorGradient::new();
 
-        gradient.insert(ColorPoint::new(0.2, Color::rgba_linear(0.0, 0.0, 0.0, 1.0)));
-        gradient.insert(ColorPoint::new(
-            0.75,
-            Color::rgba_linear(1.0, 1.0, 1.0, 1.0),
-        ));
+        gradient.insert(ColorPoint::new(0.2, Color::rgba(0.0, 0.0, 0.0, 1.0)));
+        gradient.insert(ColorPoint::new(0.75, Color::rgba(1.0, 1.0, 1.0, 1.0)));
 
-        assert_eq!(
-            gradient.sample(-0.1),
-            Color::rgba_linear(0.0, 0.0, 0.0, 1.0)
-        );
-        assert_eq!(gradient.sample(0.0), Color::rgba_linear(0.0, 0.0, 0.0, 1.0));
-        assert_eq!(gradient.sample(0.2), Color::rgba_linear(0.0, 0.0, 0.0, 1.0));
+        assert_eq!(gradient.sample(-0.1), Color::rgba(0.0, 0.0, 0.0, 1.0));
+        assert_eq!(gradient.sample(0.0), Color::rgba(0.0, 0.0, 0.0, 1.0));
+        assert_eq!(gradient.sample(0.2), Color::rgba(0.0, 0.0, 0.0, 1.0));
         assert_eq!(
             gradient.sample(0.35),
-            Color::rgba_linear(0.272_727_25, 0.272_727_25, 0.272_727_25, 1.0)
+            Color::rgba(0.272_727_25, 0.272_727_25, 0.272_727_25, 1.0)
         );
         assert_eq!(
             gradient.sample(0.5),
-            Color::rgba_linear(0.545_454_56, 0.545_454_56, 0.545_454_56, 1.0)
+            Color::rgba(0.545_454_56, 0.545_454_56, 0.545_454_56, 1.0)
         );
         assert_eq!(
             gradient.sample(0.65),
-            Color::rgba_linear(0.818_181_75, 0.818_181_75, 0.818_181_75, 1.0)
+            Color::rgba(0.818_181_75, 0.818_181_75, 0.818_181_75, 1.0)
         );
-        assert_eq!(
-            gradient.sample(0.75),
-            Color::rgba_linear(1.0, 1.0, 1.0, 1.0)
-        );
-        assert_eq!(gradient.sample(1.0), Color::rgba_linear(1.0, 1.0, 1.0, 1.0));
-        assert_eq!(gradient.sample(1.1), Color::rgba_linear(1.0, 1.0, 1.0, 1.0));
+        assert_eq!(gradient.sample(0.75), Color::rgba(1.0, 1.0, 1.0, 1.0));
+        assert_eq!(gradient.sample(1.0), Color::rgba(1.0, 1.0, 1.0, 1.0));
+        assert_eq!(gradient.sample(1.1), Color::rgba(1.0, 1.0, 1.0, 1.0));
     }
 }
