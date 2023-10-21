@@ -20,10 +20,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: olegtarasov/get-tag@v2
-        id: get_version
+      - uses: tj-actions/branch-names@v7
+        id: get-tag-name
         with:
-          tagRegex: "v(.*)"
+          strip_tag_prefix: v
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@nightly
         with:
@@ -62,7 +62,7 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ env.binary }}.zip
-          asset_name: ${{ env.binary }}_${{ steps.get_version.outputs.tag }}_wasm.zip
+          asset_name: ${{ env.binary }}_${{ steps.get-tag-name.outputs.tag }}_wasm.zip
           tag: ${{ github.ref }}
           overwrite: true
 
@@ -71,10 +71,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: olegtarasov/get-tag@v2
-        id: get_version
+      - uses: tj-actions/branch-names@v7
+        id: get-tag-name
         with:
-          tagRegex: "v(.*)"
+          strip_tag_prefix: v
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@nightly
         with:
@@ -113,7 +113,7 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ env.binary }}.zip
-          asset_name: ${{ env.binary }}_${{ steps.get_version.outputs.tag }}_linux-amd64.zip
+          asset_name: ${{ env.binary }}_${{ steps.get-tag-name.outputs.tag }}_linux-amd64.zip
           tag: ${{ github.ref }}
           overwrite: true
 
@@ -122,10 +122,10 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - uses: olegtarasov/get-tag@v2
-        id: get_version
+      - uses: tj-actions/branch-names@v7
+        id: get-tag-name
         with:
-          tagRegex: "v(.*)"
+          strip_tag_prefix: v
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@nightly
         with:
@@ -158,7 +158,7 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ env.binary }}.zip
-          asset_name: ${{ env.binary }}_${{ steps.get_version.outputs.tag }}_windows-amd64.zip
+          asset_name: ${{ env.binary }}_${{ steps.get-tag-name.outputs.tag }}_windows-amd64.zip
           tag: ${{ github.ref }}
           overwrite: true
 
@@ -196,10 +196,10 @@ jobs:
           unzip butler.zip
           chmod +x butler
           ./butler -V
-      - uses: olegtarasov/get-tag@v2
-        id: get_version
+      - uses: tj-actions/branch-names@v7
+        id: get-tag-name
         with:
-          tagRegex: "v(.*)"
+          strip_tag_prefix: v
       - name: Upload to itch.io
         env:
           BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
@@ -207,7 +207,7 @@ jobs:
           for channel in $(ls builds); do
             ./butler push \
                 --fix-permissions \
-                --userversion="${{ steps.get_version.outputs.tag }}" \
+                --userversion="${{ steps.get-tag-name.outputs.tag }}" \
                 builds/$channel/* \
                 ${{ env.itch_target }}:$channel
           done
