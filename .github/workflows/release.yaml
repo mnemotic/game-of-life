@@ -46,7 +46,7 @@ jobs:
       - name: Prepare
         working-directory: ./dist
         run: |
-          cat index.html | sed "s@'/@'./@g" | sed 's@"/@"./@g'
+          sed --in-place -e "s@'/@'./@g" -e 's@"/@"./@g' index.html
 
       - name: Package
         working-directory: ./dist
