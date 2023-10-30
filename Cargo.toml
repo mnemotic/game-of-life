@@ -37,7 +37,7 @@ features = [
 
 [dependencies]
 bevy_pixel_camera = "0.5.1"
-bevy_framepace = "0.13.3"
+bevy_framepace = "0.13.4"
 
 console_error_panic_hook = "0.1"
 ordered-float = "4.1.0"

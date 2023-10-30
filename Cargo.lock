@@ -437,9 +437,9 @@ dependencies = [
 
 [[package]]
 name = "bevy_framepace"
-version = "0.13.3"
+version = "0.13.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "07d7576b5cd203ad30feb8df8993236599cb06b24b672d8aa904caeb278b6f87"
+checksum = "2d4e2876bdf49f79564b41339e001db993bb4d8f272ed0df5b6cb5bb05a4460f"
 dependencies = [
  "bevy",
  "spin_sleep",
