@@ -3,15 +3,6 @@
 //
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-#![forbid(unsafe_code)]
-#![deny(rust_2018_idioms)]
-#![deny(clippy::disallowed_types)]
-#![deny(clippy::missing_enforced_import_renames)]
-#![warn(clippy::pedantic)]
-#![allow(clippy::needless_pass_by_value)]
-#![allow(clippy::module_name_repetitions)]
-#![allow(clippy::missing_panics_doc)]
-#![allow(clippy::must_use_candidate)]
 
 use bevy::prelude::*;
 use game::Life;

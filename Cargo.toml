@@ -52,3 +52,17 @@ opt-level = 0
 
 [profile.dev.package."*"]
 opt-level = 3
+
+[lints.rust]
+unsafe_code = "forbid"
+rust_2018_idioms = "deny"
+
+[lints.clippy]
+disallowed_types = "deny"
+missing_enforced_import_renames = "deny"
+
+pedantic = "warn"
+needless_pass_by_value = "allow"
+module_name_repetitions = "allow"
+missing_panics_doc = "allow"
+must_use_candidate = "allow"
