@@ -162,7 +162,7 @@ fn track_window_focus(
     let focused = focus.focused;
 
     // Aggregate focus events.
-    for event in &mut ev_focused_bevy {
+    for event in ev_focused_bevy.read() {
         debug!("{event:?}");
         focus.focused = event.focused;
     }

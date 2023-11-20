@@ -3,7 +3,7 @@
 //
 
 use bevy::prelude::*;
-use bevy_pixel_camera::{PixelCameraBundle, PixelCameraPlugin};
+use bevy_pixel_camera::{PixelCameraPlugin, PixelViewport, PixelZoom};
 
 use crate::config;
 
@@ -25,11 +25,12 @@ impl Plugin for CameraPlugin {
 fn setup_camera(mut commands: Commands<'_, '_>) {
     #[allow(clippy::cast_possible_wrap)]
     commands.spawn((
-        PixelCameraBundle::from_resolution(
-            config::window::WIDTH as i32,
-            config::window::HEIGHT as i32,
-            true,
-        ),
+        Camera2dBundle::default(),
+        PixelZoom::FitSize {
+            width: config::window::WIDTH as i32,
+            height: config::window::HEIGHT as i32,
+        },
+        PixelViewport,
         MainCamera,
     ));
 }

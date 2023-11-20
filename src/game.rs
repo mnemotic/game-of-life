@@ -30,8 +30,8 @@ impl Plugin for GamePlugin {
             1.0 / tps as f32,
             TimerMode::Repeating,
         )))
-        .configure_set(OnEnter(GameState::Running), GameLogicSet)
-        .configure_set(Update, GameLogicSet.run_if(on_event::<InputAction>()))
+        .configure_sets(OnEnter(GameState::Running), GameLogicSet)
+        .configure_sets(Update, GameLogicSet.run_if(on_event::<InputAction>()))
         .add_systems(
             OnEnter(GameState::Running),
             setup_simulation.in_set(GameLogicSet).run_if(run_once()),
@@ -196,7 +196,7 @@ pub fn advance_simulation(life: ResMut<'_, Life>, mut actions: EventReader<'_, '
 
     let life = life.into_inner();
 
-    for action in &mut actions {
+    for action in actions.read() {
         if let InputAction::AdvanceSimulation = action {
             // Re-borrow.
             debug!("Hash map capacity is {}", life.cells.capacity());
@@ -271,7 +271,7 @@ pub fn rewind_simulation(
     mut life: ResMut<'_, Life>,
     mut actions: EventReader<'_, '_, InputAction>,
 ) {
-    for action in &mut actions {
+    for action in actions.read() {
         if let InputAction::RewindSimulation = action {
             let Some(prev_gen) = life.history.pop_front() else {
                 info!("History is empty");
@@ -285,7 +285,7 @@ pub fn rewind_simulation(
 
 
 fn toggle_cell(mut life: ResMut<'_, Life>, mut actions: EventReader<'_, '_, InputAction>) {
-    for action in &mut actions {
+    for action in actions.read() {
         if let InputAction::ToggleCell(xy) = action {
             if life.cells.contains_key(xy) {
                 life.cells.remove(xy);

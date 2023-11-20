@@ -116,7 +116,7 @@ fn toggle_simulation_paused(
     mut next_state: ResMut<'_, NextState<GameState>>,
     mut actions: EventReader<'_, '_, InputAction>,
 ) {
-    for action in &mut actions {
+    for action in actions.read() {
         match state.get() {
             GameState::Running => {
                 if let InputAction::PauseSimulation = action {
@@ -162,7 +162,7 @@ fn toggle_cell_on_lmb(
 ) {
     if buttons.just_pressed(MouseButton::Left) {
         // Ignore input that caused the window to receive focus.
-        for event in &mut ev_focused {
+        for event in ev_focused.read() {
             if event.focused {
                 info!("Ignoring input due to receiving focus");
                 return;
