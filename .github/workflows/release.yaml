@@ -24,7 +24,7 @@ jobs:
       contents: write
 
     steps:
-      - uses: tj-actions/branch-names@v7
+      - uses: tj-actions/branch-names@v8
         id: get-tag-name
         with:
           strip_tag_prefix: v
@@ -77,7 +77,7 @@ jobs:
       contents: write
 
     steps:
-      - uses: tj-actions/branch-names@v7
+      - uses: tj-actions/branch-names@v8
         id: get-tag-name
         with:
           strip_tag_prefix: v
@@ -129,7 +129,7 @@ jobs:
       contents: write
 
     steps:
-      - uses: tj-actions/branch-names@v7
+      - uses: tj-actions/branch-names@v8
         id: get-tag-name
         with:
           strip_tag_prefix: v
@@ -200,7 +200,7 @@ jobs:
           unzip butler.zip
           chmod +x butler
           ./butler -V
-      - uses: tj-actions/branch-names@v7
+      - uses: tj-actions/branch-names@v8
         id: get-tag-name
         with:
           strip_tag_prefix: v
