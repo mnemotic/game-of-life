@@ -8,31 +8,27 @@ pub mod window {
 }
 
 pub mod cells {
+    use std::sync::LazyLock;
+
+    use bevy::color::Srgba;
     use bevy::math::Vec2;
-    use bevy::prelude::Color;
-    use once_cell::sync::Lazy;
 
     use crate::color_gradient::{ColorGradient, ColorPoint};
 
     pub const SPRITE_SIZE: Vec2 = Vec2::splat(20.0);
     pub const SPRITE_WORLD_OFFSET: Vec2 = Vec2::new(10.0, 10.0);
 
-    pub const DEAD_COLOR: Color = Color::GRAY;
+    pub const DEAD_COLOR: Srgba = bevy::color::palettes::css::GRAY;
 
-    pub fn get_age_color(age: usize) -> Color {
-        // @REVIEW
-        //
-        // Replace with [`std::cell::LazyCell`](https://doc.rust-lang.org/std/cell/struct.LazyCell.html)
-        // once it drops in stable.
-
-        static GRADIENT: Lazy<ColorGradient> = Lazy::new(|| {
+    pub fn get_age_color(age: usize) -> Srgba {
+        static GRADIENT: LazyLock<ColorGradient> = LazyLock::new(|| {
             let mut gradient = ColorGradient::new();
-            gradient.insert(ColorPoint::new(0.0, Color::rgb_u8(139, 190, 28)));
-            gradient.insert(ColorPoint::new(0.2, Color::rgb_u8(162, 201, 38)));
-            gradient.insert(ColorPoint::new(0.4, Color::rgb_u8(185, 212, 47)));
-            gradient.insert(ColorPoint::new(0.6, Color::rgb_u8(209, 222, 57)));
-            gradient.insert(ColorPoint::new(0.8, Color::rgb_u8(232, 233, 66)));
-            gradient.insert(ColorPoint::new(1.0, Color::rgb_u8(255, 244, 76)));
+            gradient.insert(ColorPoint::new(0.0, Srgba::rgb_u8(139, 190, 28)));
+            gradient.insert(ColorPoint::new(0.2, Srgba::rgb_u8(162, 201, 38)));
+            gradient.insert(ColorPoint::new(0.4, Srgba::rgb_u8(185, 212, 47)));
+            gradient.insert(ColorPoint::new(0.6, Srgba::rgb_u8(209, 222, 57)));
+            gradient.insert(ColorPoint::new(0.8, Srgba::rgb_u8(232, 233, 66)));
+            gradient.insert(ColorPoint::new(1.0, Srgba::rgb_u8(255, 244, 76)));
 
             gradient
         });

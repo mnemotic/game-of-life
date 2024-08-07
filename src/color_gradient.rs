@@ -2,6 +2,7 @@
 // Copyright (c) 2023 Martin Green <martin@bk2x.com>. All rights reserved.
 //
 
+use bevy::math::VectorSpace;
 use bevy::prelude::*;
 use ordered_float::OrderedFloat;
 
@@ -28,7 +29,7 @@ impl ColorGradient {
 
     /// Sample the gradient at the given point. `point` will be clamped to [0.0, 1.0] range. Panics
     /// if the gradient has less than 2 sampling points
-    pub fn sample(&self, point: f32) -> Color {
+    pub fn sample(&self, point: f32) -> Srgba {
         assert!(self.points.len() >= 2);
 
         let point: OrderedFloat<f32> = point.clamp(0.0, 1.0).into();
@@ -56,10 +57,10 @@ impl ColorGradient {
 
                 // Remap the sampling point into the range between `left` and `right` for
                 // interpolation.
-                Color::rgba_from_array(left.value.rgba_to_vec4().lerp(
-                    right.value.rgba_to_vec4(),
+                left.value.lerp(
+                    right.value,
                     ((point - left.point) / (right.point - left.point)).into(),
-                ))
+                )
             }
         }
     }
@@ -75,8 +76,8 @@ impl Default for ColorGradient {
         // Opaque black to opaque white gradient.
         Self {
             points: vec![
-                ColorPoint::new(0.0, Color::rgba(0.0, 0.0, 0.0, 1.0)),
-                ColorPoint::new(1.0, Color::rgba(1.0, 1.0, 1.0, 1.0)),
+                ColorPoint::new(0.0, Srgba::new(0.0, 0.0, 0.0, 1.0)),
+                ColorPoint::new(1.0, Srgba::new(1.0, 1.0, 1.0, 1.0)),
             ],
         }
     }
@@ -85,12 +86,12 @@ impl Default for ColorGradient {
 #[derive(Clone, Copy, Debug)]
 pub struct ColorPoint {
     point: OrderedFloat<f32>,
-    value: Color,
+    value: Srgba,
 }
 
 impl ColorPoint {
     /// Create a new color sampling point. `point` will be clamped to [0.0, 1.0] range.
-    pub fn new(point: f32, value: Color) -> Self {
+    pub fn new(point: f32, value: Srgba) -> Self {
         Self {
             point: point.clamp(0.0, 1.0).into(),
             value,
@@ -108,35 +109,35 @@ mod tests {
     pub fn test_default_gradient() {
         let gradient = ColorGradient::default();
 
-        assert_eq!(gradient.sample(0.0), Color::rgba(0.0, 0.0, 0.0, 1.0));
-        assert_eq!(gradient.sample(0.5), Color::rgba(0.5, 0.5, 0.5, 1.0));
-        assert_eq!(gradient.sample(1.0), Color::rgba(1.0, 1.0, 1.0, 1.0));
+        assert_eq!(gradient.sample(0.0), Srgba::new(0.0, 0.0, 0.0, 1.0));
+        assert_eq!(gradient.sample(0.5), Srgba::new(0.5, 0.5, 0.5, 1.0));
+        assert_eq!(gradient.sample(1.0), Srgba::new(1.0, 1.0, 1.0, 1.0));
     }
 
     #[test]
     pub fn test_custom_gradient() {
         let mut gradient = ColorGradient::new();
 
-        gradient.insert(ColorPoint::new(0.2, Color::rgba(0.0, 0.0, 0.0, 1.0)));
-        gradient.insert(ColorPoint::new(0.75, Color::rgba(1.0, 1.0, 1.0, 1.0)));
+        gradient.insert(ColorPoint::new(0.20, Srgba::new(0.0, 0.0, 0.0, 1.0)));
+        gradient.insert(ColorPoint::new(0.75, Srgba::new(1.0, 1.0, 1.0, 1.0)));
 
-        assert_eq!(gradient.sample(-0.1), Color::rgba(0.0, 0.0, 0.0, 1.0));
-        assert_eq!(gradient.sample(0.0), Color::rgba(0.0, 0.0, 0.0, 1.0));
-        assert_eq!(gradient.sample(0.2), Color::rgba(0.0, 0.0, 0.0, 1.0));
+        assert_eq!(gradient.sample(-0.1), Srgba::new(0.0, 0.0, 0.0, 1.0));
+        assert_eq!(gradient.sample(0.0), Srgba::new(0.0, 0.0, 0.0, 1.0));
+        assert_eq!(gradient.sample(0.2), Srgba::new(0.0, 0.0, 0.0, 1.0));
         assert_eq!(
             gradient.sample(0.35),
-            Color::rgba(0.272_727_25, 0.272_727_25, 0.272_727_25, 1.0)
+            Srgba::new(0.272_727_25, 0.272_727_25, 0.272_727_25, 1.0)
         );
         assert_eq!(
             gradient.sample(0.5),
-            Color::rgba(0.545_454_56, 0.545_454_56, 0.545_454_56, 1.0)
+            Srgba::new(0.545_454_56, 0.545_454_56, 0.545_454_56, 1.0)
         );
         assert_eq!(
             gradient.sample(0.65),
-            Color::rgba(0.818_181_75, 0.818_181_75, 0.818_181_75, 1.0)
+            Srgba::new(0.818_181_75, 0.818_181_75, 0.818_181_75, 1.0)
         );
-        assert_eq!(gradient.sample(0.75), Color::rgba(1.0, 1.0, 1.0, 1.0));
-        assert_eq!(gradient.sample(1.0), Color::rgba(1.0, 1.0, 1.0, 1.0));
-        assert_eq!(gradient.sample(1.1), Color::rgba(1.0, 1.0, 1.0, 1.0));
+        assert_eq!(gradient.sample(0.75), Srgba::new(1.0, 1.0, 1.0, 1.0));
+        assert_eq!(gradient.sample(1.0), Srgba::new(1.0, 1.0, 1.0, 1.0));
+        assert_eq!(gradient.sample(1.1), Srgba::new(1.0, 1.0, 1.0, 1.0));
     }
 }

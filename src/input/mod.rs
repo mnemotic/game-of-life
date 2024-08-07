@@ -35,7 +35,6 @@ impl Plugin for InputPlugin {
             .add_systems(
                 Update,
                 (
-                    bevy::window::close_on_esc,
                     (get_cursor_world_position, toggle_cell_on_lmb).chain(),
                     (
                         (

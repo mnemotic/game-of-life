@@ -44,8 +44,6 @@ fn main() {
         .insert_resource(Msaa::Off)
         .insert_resource(ClearColor(Color::BLACK))
         .insert_resource(Life::new(width / 20, height / 20))
-        .insert_resource(AssetMetaCheck::Never)
-        .init_state::<AppState>()
         .add_event::<WindowFocused>()
         .add_plugins(
             DefaultPlugins
@@ -58,8 +56,13 @@ fn main() {
                     }),
                     ..default()
                 })
+                .set(AssetPlugin {
+                    meta_check: AssetMetaCheck::Never,
+                    ..default()
+                })
                 .set(ImagePlugin::default_nearest()),
         )
+        .init_state::<AppState>()
         .add_plugins(input::InputPlugin)
         .add_plugins(ui::UiPlugin)
         .add_plugins(camera::CameraPlugin)
@@ -109,7 +112,7 @@ fn init_presentation(
                         index: 254,
                     },
                     Sprite {
-                        color: get_age_color(0),
+                        color: get_age_color(0).into(),
                         custom_size: Some(SPRITE_SIZE),
                         ..default()
                     },
@@ -121,7 +124,7 @@ fn init_presentation(
                         index: 255,
                     },
                     Sprite {
-                        color: DEAD_COLOR,
+                        color: DEAD_COLOR.into(),
                         custom_size: Some(SPRITE_SIZE),
                         ..default()
                     },
@@ -133,13 +136,13 @@ fn init_presentation(
                 (Vec2::new(x as f32, y as f32) * SPRITE_SIZE + SPRITE_WORLD_OFFSET).extend(0.0),
             );
             commands.spawn((
-                SpriteSheetBundle {
+                SpriteBundle {
                     texture: glyphs.1.clone(),
-                    atlas,
                     sprite,
                     transform,
                     ..default()
                 },
+                atlas,
                 Position(IVec2::new(x, y)),
             ));
         }
@@ -157,10 +160,10 @@ fn update_presentation(
     for (position, mut atlas, mut sprite) in &mut q_sprites {
         if let Some(cell) = life.cells.get(position) {
             atlas.index = 254;
-            sprite.color = get_age_color(cell.age);
+            sprite.color = get_age_color(cell.age).into();
         } else {
             atlas.index = 255;
-            sprite.color = DEAD_COLOR;
+            sprite.color = DEAD_COLOR.into();
         }
     }
 }

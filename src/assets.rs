@@ -41,7 +41,7 @@ fn load_fontsheet(
     let fontsheet = asset_server.load(FONTSHEET_PATH);
     assets.push(fontsheet.clone().untyped());
 
-    let layout = TextureAtlasLayout::from_grid(Vec2::splat(10.0), 16, 16, None, None);
+    let layout = TextureAtlasLayout::from_grid(UVec2::splat(10), 16, 16, None, None);
     commands.insert_resource(GlyphAtlas(texture_atlases.add(layout), fontsheet));
 }
 
@@ -59,8 +59,8 @@ fn check_fontsheet_loading(
                 Some(handle_load_state) => match handle_load_state {
                     LoadState::Loaded => continue,
                     LoadState::Loading => load_state = LoadState::Loading,
-                    LoadState::Failed => {
-                        load_state = LoadState::Failed;
+                    LoadState::Failed(err) => {
+                        load_state = LoadState::Failed(err);
                         break;
                     }
                     LoadState::NotLoaded => {
@@ -81,6 +81,6 @@ fn check_fontsheet_loading(
             info!("Assets loaded");
             next_state.set(AppState::Running);
         }
-        LoadState::Failed => panic!("failed to load assets"),
+        LoadState::Failed(err) => panic!("failed to load assets: {err}"),
     }
 }
