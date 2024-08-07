@@ -56,8 +56,8 @@ impl ColorGradient {
 
                 // Remap the sampling point into the range between `left` and `right` for
                 // interpolation.
-                Color::from(Vec4::from(left.value).lerp(
-                    Vec4::from(right.value),
+                Color::rgba_from_array(left.value.rgba_to_vec4().lerp(
+                    right.value.rgba_to_vec4(),
                     ((point - left.point) / (right.point - left.point)).into(),
                 ))
             }

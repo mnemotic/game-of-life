@@ -4,11 +4,11 @@
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use bevy::asset::AssetMetaCheck;
 use bevy::prelude::*;
 use game::Life;
 
 use crate::assets::GlyphAtlas;
-use crate::game::GameLogicSet;
 
 
 mod assets;
@@ -44,7 +44,8 @@ fn main() {
         .insert_resource(Msaa::Off)
         .insert_resource(ClearColor(Color::BLACK))
         .insert_resource(Life::new(width / 20, height / 20))
-        .add_state::<GameState>()
+        .insert_resource(AssetMetaCheck::Never)
+        .init_state::<AppState>()
         .add_event::<WindowFocused>()
         .add_plugins(
             DefaultPlugins
@@ -52,7 +53,7 @@ fn main() {
                     primary_window: Some(Window {
                         resolution: (width as f32, height as f32).into(),
                         position: WindowPosition::Centered(MonitorSelection::Primary),
-                        title: "Conway's Game of Life".to_owned(),
+                        title: String::from("Conway's Game of Life"),
                         ..default()
                     }),
                     ..default()
@@ -66,20 +67,20 @@ fn main() {
         .add_plugins(game::GamePlugin)
         .add_systems(
             Startup,
-            |mut next_state: ResMut<'_, NextState<GameState>>| next_state.set(GameState::Startup),
+            |mut next_state: ResMut<'_, NextState<AppState>>| next_state.set(AppState::Startup),
         )
         .add_systems(PreUpdate, track_window_focus)
         .add_systems(
-            OnEnter(GameState::Running),
-            init_presentation.after(GameLogicSet).run_if(run_once()),
+            OnEnter(AppState::Running),
+            init_presentation.run_if(run_once()),
         )
-        .add_systems(Update, update_presentation.after(GameLogicSet))
+        .add_systems(Update, update_presentation)
         .run();
 }
 
 
 #[derive(States, Clone, Debug, Default, PartialEq, Eq, Hash)]
-enum GameState {
+enum AppState {
     #[default]
     None,
     Startup,
@@ -101,20 +102,30 @@ fn init_presentation(
 
     for y in world.bounds.min.y..world.bounds.max.y {
         for x in world.bounds.min.x..world.bounds.max.x {
-            let sprite = if world.cells.contains_key(&IVec2::new(x, y)) {
-                TextureAtlasSprite {
-                    index: 254,
-                    color: get_age_color(0),
-                    custom_size: Some(SPRITE_SIZE),
-                    ..default()
-                }
+            let (atlas, sprite) = if world.cells.contains_key(&IVec2::new(x, y)) {
+                (
+                    TextureAtlas {
+                        layout: glyphs.0.clone(),
+                        index: 254,
+                    },
+                    Sprite {
+                        color: get_age_color(0),
+                        custom_size: Some(SPRITE_SIZE),
+                        ..default()
+                    },
+                )
             } else {
-                TextureAtlasSprite {
-                    index: 255,
-                    color: DEAD_COLOR,
-                    custom_size: Some(SPRITE_SIZE),
-                    ..default()
-                }
+                (
+                    TextureAtlas {
+                        layout: glyphs.0.clone(),
+                        index: 255,
+                    },
+                    Sprite {
+                        color: DEAD_COLOR,
+                        custom_size: Some(SPRITE_SIZE),
+                        ..default()
+                    },
+                )
             };
 
             #[allow(clippy::cast_precision_loss)]
@@ -123,8 +134,9 @@ fn init_presentation(
             );
             commands.spawn((
                 SpriteSheetBundle {
+                    texture: glyphs.1.clone(),
+                    atlas,
                     sprite,
-                    texture_atlas: glyphs.clone(),
                     transform,
                     ..default()
                 },
@@ -138,16 +150,16 @@ fn init_presentation(
 /// Update the presentation.
 fn update_presentation(
     life: Res<'_, Life>,
-    mut q_sprites: Query<'_, '_, (&Position, &mut TextureAtlasSprite)>,
+    mut q_sprites: Query<'_, '_, (&Position, &mut TextureAtlas, &mut Sprite)>,
 ) {
     use config::cells::{get_age_color, DEAD_COLOR};
 
-    for (position, mut sprite) in &mut q_sprites {
+    for (position, mut atlas, mut sprite) in &mut q_sprites {
         if let Some(cell) = life.cells.get(position) {
-            sprite.index = 254;
+            atlas.index = 254;
             sprite.color = get_age_color(cell.age);
         } else {
-            sprite.index = 255;
+            atlas.index = 255;
             sprite.color = DEAD_COLOR;
         }
     }

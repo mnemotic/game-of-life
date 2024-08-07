@@ -9,7 +9,7 @@ use bevy::math::IRect;
 use bevy::prelude::*;
 
 use crate::input::InputAction;
-use crate::{config, GameState};
+use crate::{config, AppState};
 
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug, SystemSet)]
@@ -30,10 +30,10 @@ impl Plugin for GamePlugin {
             1.0 / tps as f32,
             TimerMode::Repeating,
         )))
-        .configure_sets(OnEnter(GameState::Running), GameLogicSet)
+        .configure_sets(OnEnter(AppState::Running), GameLogicSet)
         .configure_sets(Update, GameLogicSet.run_if(on_event::<InputAction>()))
         .add_systems(
-            OnEnter(GameState::Running),
+            OnEnter(AppState::Running),
             setup_simulation.in_set(GameLogicSet).run_if(run_once()),
         )
         .add_systems(
@@ -42,9 +42,9 @@ impl Plugin for GamePlugin {
         )
         .add_systems(
             Update,
-            tick_simulation_update_timer.run_if(in_state(GameState::Running)),
+            tick_simulation_update_timer.run_if(in_state(AppState::Running)),
         )
-        .add_systems(OnEnter(GameState::Paused), reset_simulation_update_timer);
+        .add_systems(OnEnter(AppState::Paused), reset_simulation_update_timer);
     }
 }
 

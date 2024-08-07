@@ -9,7 +9,7 @@ use egui_extras::{Size, StripBuilder};
 
 use crate::game::{Life, SimulationConfig, SimulationUpdateTimer};
 use crate::input::InputAction;
-use crate::{ui, GameState};
+use crate::{ui, AppState};
 
 
 pub mod widgets;
@@ -32,14 +32,14 @@ impl Plugin for UiPlugin {
 
 
 fn draw_controls_ui(
-    state: Res<'_, State<GameState>>,
+    state: Res<'_, State<AppState>>,
     life: Res<'_, Life>,
     mut config: ResMut<'_, SimulationConfig>,
     mut timer: ResMut<'_, SimulationUpdateTimer>,
     mut contexts: EguiContexts<'_, '_>,
     mut actions: EventWriter<'_, InputAction>,
 ) {
-    let mut paused = *state.get() == GameState::Paused;
+    let mut paused = *state.get() == AppState::Paused;
     egui::Window::new("Controls")
         .resizable(false)
         .collapsible(true)
@@ -101,8 +101,12 @@ fn draw_controls_ui(
                 })
         });
     match state.get() {
-        GameState::Paused if !paused => actions.send(InputAction::UnpauseSimulation),
-        GameState::Running if paused => actions.send(InputAction::PauseSimulation),
+        AppState::Paused if !paused => {
+            actions.send(InputAction::UnpauseSimulation);
+        }
+        AppState::Running if paused => {
+            actions.send(InputAction::PauseSimulation);
+        }
         _ => {}
     };
 }
@@ -110,7 +114,7 @@ fn draw_controls_ui(
 
 // @CREDIT: <https://github.com/mvlabat/bevy_egui/issues/47#issuecomment-1703964969>
 fn absorb_egui_inputs(
-    mut mouse: ResMut<'_, Input<MouseButton>>,
+    mut mouse: ResMut<'_, ButtonInput<MouseButton>>,
     mut contexts: EguiContexts<'_, '_>,
 ) {
     if contexts.ctx_mut().is_pointer_over_area() {

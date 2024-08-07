@@ -5,15 +5,15 @@
 use bevy::asset::LoadState;
 use bevy::prelude::*;
 
-use crate::GameState;
+use crate::AppState;
 
 
 #[derive(Default, Resource, Deref, DerefMut)]
 pub struct GameAssets(pub Vec<UntypedHandle>);
 
 
-#[derive(Default, Resource, Deref, DerefMut)]
-pub struct GlyphAtlas(pub Handle<TextureAtlas>);
+#[derive(Default, Resource)]
+pub struct GlyphAtlas(pub Handle<TextureAtlasLayout>, pub Handle<Image>);
 
 
 pub struct AssetPlugin;
@@ -21,35 +21,35 @@ pub struct AssetPlugin;
 impl Plugin for AssetPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<GameAssets>()
-            .add_systems(Startup, load_assets)
+            .add_systems(Startup, load_fontsheet)
             .add_systems(
                 Update,
-                check_asset_loading.run_if(in_state(GameState::Startup)),
+                check_fontsheet_loading.run_if(in_state(AppState::Startup)),
             );
     }
 }
 
 
-fn load_assets(
+fn load_fontsheet(
     mut commands: Commands<'_, '_>,
     asset_server: Res<'_, AssetServer>,
     mut assets: ResMut<'_, GameAssets>,
-    mut texture_atlases: ResMut<'_, Assets<TextureAtlas>>,
+    mut texture_atlases: ResMut<'_, Assets<TextureAtlasLayout>>,
 ) {
     const FONTSHEET_PATH: &str = "cp437_10x10.png";
 
     let fontsheet = asset_server.load(FONTSHEET_PATH);
     assets.push(fontsheet.clone().untyped());
 
-    let atlas = TextureAtlas::from_grid(fontsheet, Vec2::splat(10.0), 16, 16, None, None);
-    commands.insert_resource(GlyphAtlas(texture_atlases.add(atlas)));
+    let layout = TextureAtlasLayout::from_grid(Vec2::splat(10.0), 16, 16, None, None);
+    commands.insert_resource(GlyphAtlas(texture_atlases.add(layout), fontsheet));
 }
 
 
-fn check_asset_loading(
+fn check_fontsheet_loading(
     asset_server: Res<'_, AssetServer>,
     assets: Res<'_, GameAssets>,
-    mut next_state: ResMut<'_, NextState<GameState>>,
+    mut next_state: ResMut<'_, NextState<AppState>>,
 ) {
     let mut load_state = LoadState::Loaded;
     for handle in assets.iter() {
@@ -79,7 +79,7 @@ fn check_asset_loading(
         }
         LoadState::Loaded => {
             info!("Assets loaded");
-            next_state.set(GameState::Running);
+            next_state.set(AppState::Running);
         }
         LoadState::Failed => panic!("failed to load assets"),
     }

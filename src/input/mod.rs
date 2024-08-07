@@ -8,7 +8,7 @@ use bevy::window::PrimaryWindow;
 use crate::camera::MainCamera;
 use crate::config::cells::{SPRITE_SIZE, SPRITE_WORLD_OFFSET};
 use crate::game::{GameLogicSet, SimulationConfig, SimulationUpdateTimer};
-use crate::{GameState, WindowFocused};
+use crate::{AppState, WindowFocused};
 
 
 #[derive(Default, Resource, Deref, DerefMut)]
@@ -56,18 +56,22 @@ impl Plugin for InputPlugin {
 
 /// Pause / unpause the simulation on key press.
 fn toggle_pause_simulation_on_key(
-    keys: Res<'_, Input<KeyCode>>,
-    state: Res<'_, State<GameState>>,
+    keys: Res<'_, ButtonInput<KeyCode>>,
+    state: Res<'_, State<AppState>>,
     mut actions: EventWriter<'_, InputAction>,
 ) {
-    const PAUSE_KEYS: [KeyCode; 2] = [KeyCode::Space, KeyCode::P];
+    const PAUSE_KEYS: [KeyCode; 2] = [KeyCode::Space, KeyCode::KeyP];
 
     for key in PAUSE_KEYS {
         if keys.just_pressed(key) {
             // Pause when running and unpause when paused.
             match state.get() {
-                GameState::Running => actions.send(InputAction::PauseSimulation),
-                GameState::Paused => actions.send(InputAction::UnpauseSimulation),
+                AppState::Running => {
+                    actions.send(InputAction::PauseSimulation);
+                }
+                AppState::Paused => {
+                    actions.send(InputAction::UnpauseSimulation);
+                }
                 _ => {}
             }
             break;
@@ -78,7 +82,7 @@ fn toggle_pause_simulation_on_key(
 
 /// Advance the simulation by a single tick (generation) on key press.
 fn advance_simulation_on_key(
-    keys: Res<'_, Input<KeyCode>>,
+    keys: Res<'_, ButtonInput<KeyCode>>,
     mut actions: EventWriter<'_, InputAction>,
 ) {
     const ADV_SIM_BINDINGS: [KeyCode; 1] = [KeyCode::BracketRight];
@@ -95,7 +99,7 @@ fn advance_simulation_on_key(
 
 /// Rewind the simulation by a single tick (generation) on key press.
 fn rewind_simulation_on_key(
-    keys: Res<'_, Input<KeyCode>>,
+    keys: Res<'_, ButtonInput<KeyCode>>,
     mut actions: EventWriter<'_, InputAction>,
 ) {
     const RWD_SIM_BINDINGS: [KeyCode; 1] = [KeyCode::BracketLeft];
@@ -112,20 +116,20 @@ fn rewind_simulation_on_key(
 
 /// Pause / unpause the simulation.
 fn toggle_simulation_paused(
-    state: Res<'_, State<GameState>>,
-    mut next_state: ResMut<'_, NextState<GameState>>,
+    state: Res<'_, State<AppState>>,
+    mut next_state: ResMut<'_, NextState<AppState>>,
     mut actions: EventReader<'_, '_, InputAction>,
 ) {
     for action in actions.read() {
         match state.get() {
-            GameState::Running => {
+            AppState::Running => {
                 if let InputAction::PauseSimulation = action {
-                    next_state.set(GameState::Paused);
+                    next_state.set(AppState::Paused);
                 }
             }
-            GameState::Paused => {
+            AppState::Paused => {
                 if let InputAction::UnpauseSimulation = action {
-                    next_state.set(GameState::Running);
+                    next_state.set(AppState::Running);
                 }
             }
             _ => {}
@@ -155,7 +159,7 @@ fn get_cursor_world_position(
 }
 
 fn toggle_cell_on_lmb(
-    buttons: Res<'_, Input<MouseButton>>,
+    buttons: Res<'_, ButtonInput<MouseButton>>,
     mouse_position: Res<'_, CursorWorldPosition>,
     mut ev_focused: EventReader<'_, '_, WindowFocused>,
     mut actions: EventWriter<'_, InputAction>,
@@ -182,7 +186,7 @@ fn toggle_cell_on_lmb(
 
 
 fn change_simulation_rate_on_key(
-    keys: Res<'_, Input<KeyCode>>,
+    keys: Res<'_, ButtonInput<KeyCode>>,
     mut config: ResMut<'_, SimulationConfig>,
     mut timer: ResMut<'_, SimulationUpdateTimer>,
 ) {
@@ -190,7 +194,7 @@ fn change_simulation_rate_on_key(
     if keys.just_pressed(KeyCode::Minus) {
         tps -= 1;
     }
-    if keys.just_pressed(KeyCode::Equals) {
+    if keys.just_pressed(KeyCode::Equal) {
         tps += 1;
     }
     tps = tps.clamp(1, 64);
