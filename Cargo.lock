@@ -1735,7 +1735,6 @@ dependencies = [
  "bevy_pixel_camera",
  "console_error_panic_hook",
  "egui_extras",
- "once_cell",
  "ordered-float",
  "priority-queue",
 ]
