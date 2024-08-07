@@ -215,7 +215,7 @@ pub fn advance_simulation(life: ResMut<'_, Life>, mut actions: EventReader<'_, '
                     // We count the number of alive cells, including the inner cell, in the
                     // neighborhood of each cell.
 
-                    // Extend `NEIGHBOR_OFFSET` with a invariant offset for the inner cell.
+                    // Extend `NEIGHBOR_OFFSET` with an invariant offset for the inner cell.
                     let offsets = NEIGHBOR_OFFSETS
                         .iter()
                         .chain([IVec2 { x: 0, y: 0 }].iter())
