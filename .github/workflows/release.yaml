@@ -1,217 +1,302 @@
-# @CREDIT: <https://github.com/bevyengine/bevy_github_ci_template/blob/main/.github/workflows/release.yaml>
+# @CREDIT:
+#   <https://github.com/bevyengine/bevy_github_ci_template/blob/main/.github/workflows/release.yaml>
+#   <https://github.com/TheBevyFlock/bevy_quickstart/blob/main/.github/workflows/release.yaml>
 
 name: Release
 
 on:
   push:
     tags:
-      - 'v*'
+      # <https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#filter-pattern-cheat-sheet>
+      - 'v[0-9]+.[0-9]+.[0-9]+*'
+
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number in SemVer 2.0 format for pre-release versions (X.Y.Z-alpha.W)'
+        required: true
+        type: string
+      upload-to-itch:
+        description: 'Upload to itch.io'
+        required: false
+        type: boolean
+        default: false
 
 env:
-  binary: game-of-life
-  add_binaries_to_github_release: true
-  itch_target: mnemotic/game-of-life
-
+  # Name of the binary that will be created.
+  BIN_NAME: game-of-life
+  # Name of the package that will be created.
+  PKG_NAME: game-of-life
+  # Bevy's asset directory; usually `assets`.
+  ASSET_DIR: assets
+  # itch.io target; usually `<itch.io username>/<game name>`. Comment out
+  # to disable upload to itch.io.
+  ITCH_TARGET: mnemotic/game-of-life
+  # Whether assets be downloaded from GitHub LFS store.
+  USE_GIT_LFS: true
+  # Whether to upload the binaries to itch.io. Set to `false` or comment
+  # out to disable
+  UPLOAD_TO_ITCH: true
+  # Whether to upload the binaries to GitHub releases. Set to `false` or
+  # comment out to disable.
+  UPLOAD_TO_GITHUB_RELEASE: true
 
 jobs:
-
-  # Build for WASM.
-  release-wasm:
-    name: Build for Wasm
+  check-is-manually-triggered:
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: write
-
     steps:
-      - uses: tj-actions/branch-names@v7
-        id: get-tag-name
-        with:
-          strip_tag_prefix: v
-      - uses: actions/checkout@v4
-        with:
-          lfs: true
-      - uses: dtolnay/rust-toolchain@nightly
-        with:
-          targets: wasm32-unknown-unknown
-      - name: Install wasm-bindgen-cli
+      - name: Check whether workflow was triggered manually
         run: |
-          cargo install --locked wasm-bindgen-cli
-      - name: Install Trunk
-        run: |
-          cargo install --locked trunk
-      - name: Build
-        run: |
-          trunk build --release
-      # See <https://github.com/thedodd/trunk/pull/361#issuecomment-1308487648>.
-      - name: Prepare
-        working-directory: ./dist
-        run: |
-          sed --in-place -e "s@'/@'./@g" -e 's@"/@"./@g' index.html
-      - name: Package
-        working-directory: ./dist
-        run: |
-          zip --recurse-paths ../${{ env.binary }}.zip .
-      - name: Upload binaries to artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          path: ${{ env.binary }}.zip
-          name: wasm
-          retention-days: 1
-      - name: Upload binaries to release
-        if: ${{ env.add_binaries_to_github_release == 'true' }}
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ${{ env.binary }}.zip
-          asset_name: ${{ env.binary }}_${{ steps.get-tag-name.outputs.tag }}_wasm.zip
-          tag: ${{ github.ref }}
-          overwrite: true
+          echo "::notice ::Workflow triggered by event '${{ github.event_name }}'"
+    outputs:
+      is-manually-triggered: ${{ github.event_name == 'workflow_dispatch' }}
 
-  # Build for Linux.
-  release-linux:
-    name: Build for Linux
+  validate-version:
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: write
-
+    needs:
+      - check-is-manually-triggered
+    if: ${{ needs.check-is-manually-triggered.outputs.is-manually-triggered == 'true' }}
     steps:
-      - uses: tj-actions/branch-names@v7
-        id: get-tag-name
+      - name: Validate version
+        run: |
+          regex='^[0-9]+\.[0-9]+\.[0-9]+-(alpha|beta|rc)\.[1-9]+$'
+          version='${{ inputs.version }}'
+          if [[ $version =~ $regex ]]; then
+            echo "::notice ::Version '${version}' is valid"
+            exit 0
+          else
+            echo "::error ::Version '${version}' is not valid"
+            exit 1
+          fi
+
+  get-version:
+    runs-on: ubuntu-latest
+    needs:
+      - validate-version
+    if: >-
+      ${{
+        always() &&
+        !cancelled() &&
+        needs.validate-version.result == 'success'
+      }}
+    steps:
+      - name: Get tag version
+        id: get-tag-version
+        uses: tj-actions/branch-names@v8
         with:
-          strip_tag_prefix: v
-      - uses: actions/checkout@v4
+          strip_tag_prefix: 'v'
+    outputs:
+      version: ${{ inputs.version || steps.get-tag-version.outputs.tag }}
+
+  build:
+    permissions:
+      contents: write # required to create (pre)releases and tags
+    needs:
+      - get-version
+      - check-is-manually-triggered
+    env:
+      VERSION: ${{ needs.get-version.outputs.version }}
+    strategy:
+      matrix:
+        include:
+          - platform: web
+            targets: wasm32-unknown-unknown
+            profile: release
+            binary_ext: .wasm
+            package_ext: .zip
+            runner: ubuntu-latest
+
+          - platform: linux
+            targets: x86_64-unknown-linux-gnu
+            profile: release-native
+            package_ext: .zip
+            runner: ubuntu-latest
+
+          - platform: windows
+            targets: x86_64-pc-windows-msvc
+            profile: release-native
+            binary_ext: .exe
+            package_ext: .zip
+            runner: windows-latest
+    runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Set environment variables
+        run: |
+          pkg='${{ env.PKG_NAME }}_${{ env.VERSION }}_${{ matrix.platform }}'
+          echo "PKG=${pkg}" >> "${GITHUB_ENV}"
+          echo "OUT_DIR=tmp/packages/${pkg}/" >> "${GITHUB_ENV}"
+
+      - name: Checkout sources
+        uses: actions/checkout@v4
         with:
-          lfs: true
-      - uses: dtolnay/rust-toolchain@nightly
+          lfs: ${{ env.USE_GIT_LFS }}
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@nightly
         with:
-          targets: x86_64-unknown-linux-gnu
-      - name: Install dependencies
+          targets: ${{ matrix.targets }}
+
+      - name: Restore cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install dependencies (Linux)
+        if: ${{ matrix.platform == 'linux' }}
         run: |
           sudo apt-get update
           sudo apt-get install --no-install-recommends \
-            pkg-config libx11-dev libasound2-dev libudev-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev
-      - name: Build
+            libasound2-dev \
+            libudev-dev \
+            libwayland-dev \
+            libxkbcommon-dev
+
+      - name: Prepare output directories
         run: |
-          cargo build --release --target x86_64-unknown-linux-gnu
-      - name: Prepare
+          rm -rf tmp/
+          mkdir -p tmp/bin/ '${{ env.OUT_DIR }}'
+
+      - name: Install cargo-binstall (web)
+        if: ${{ matrix.platform == 'web' }}
+        uses: cargo-bins/cargo-binstall@v1.9.0
+
+      - name: Install Trunk (web)
+        if: ${{ matrix.platform == 'web' }}
         run: |
-          mkdir linux
-          cp target/x86_64-unknown-linux-gnu/release/${{ env.binary }} linux/
-          cp -r assets linux/
-      - name: Package
-        working-directory: ./linux
+          cargo binstall --no-confirm --force trunk wasm-bindgen-cli wasm-opt
+
+      - name: Build binaries (web)
+        if: ${{ matrix.platform == 'web' }}
         run: |
-          zip --recurse-paths ../${{ env.binary }}.zip .
-      - name: Upload binaries to artifacts
-        uses: actions/upload-artifact@v3
+          trunk build --release --dist '${{ env.OUT_DIR }}'
+
+      - name: Build binaries (native)
+        if: ${{ matrix.platform != 'web' }}
+        run: |
+          for target in ${{ matrix.targets }}; do
+            cargo build \
+              --profile='${{ matrix.profile }}' \
+              --target="${target}"
+          
+            # move binaries to tmp/bin/ directory
+            src="target/${target}/${{ matrix.profile }}/${{ env.BIN_NAME }}${{ matrix.binary_ext }}"
+            dst="tmp/bin/${target}${{ matrix.binary_ext }}"
+            mv $src $dst
+          done
+
+      - name: Add binaries to package (native)
+        if: ${{ matrix.platform != 'web' }}
+        run: |
+          for target in ${{ matrix.targets }}; do
+            src="tmp/bin/${target}${{ matrix.binary_ext }}"
+            dst='${{ env.OUT_DIR }}/${{ env.PKG_NAME }}${{ matrix.binary_ext }}'
+            mv $src $dst
+          done
+
+      - name: Add assets to package (native)
+        if: ${{ matrix.platform != 'web' }}
+        run: |
+          cp -r '${{ env.ASSET_DIR }}' '${{ env.OUT_DIR }}' || true # ignore errors
+
+      - name: Finalize package (native, non-Windows)
+        if: ${{ matrix.platform != 'windows' }}
+        working-directory: tmp/packages/
+        run: |
+          zip --recurse-paths '${{ env.PKG }}${{ matrix.package_ext }}' '${{ env.PKG }}'
+
+      - name: Finalize package (native, Windows)
+        if: ${{ matrix.platform == 'windows' }}
+        working-directory: tmp/packages/
+        shell: pwsh
+        run: |
+          $Params = @{
+            Path = '${{ env.PKG }}'
+            DestinationPath = '${{ env.PKG }}${{ matrix.package_ext }}'
+          }
+          Compress-Archive @Params
+
+      - name: Upload package to artifacts
+        uses: actions/upload-artifact@v4
         with:
-          path: ${{ env.binary }}.zip
-          name: linux
+          path: tmp/packages/${{ env.PKG }}${{ matrix.package_ext }}
+          name: package-${{ matrix.platform }}
           retention-days: 1
-      - name: Upload binaries to release
-        if: ${{ env.add_binaries_to_github_release == 'true' }}
+
+      - name: Upload package to GitHub releases
+        if: ${{ env.UPLOAD_TO_GITHUB_RELEASE == 'true' && matrix.platform != 'web' }}
         uses: svenstaro/upload-release-action@v2
         with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ${{ env.binary }}.zip
-          asset_name: ${{ env.binary }}_${{ steps.get-tag-name.outputs.tag }}_linux-amd64.zip
-          tag: ${{ github.ref }}
+          repo_token: '${{ secrets.GITHUB_TOKEN }}'
+          file: tmp/packages/${{ env.PKG }}${{ matrix.package_ext }}
+          asset_name: ${{ env.PKG }}${{ matrix.package_ext }}
+          tag: v${{ env.VERSION }}
           overwrite: true
+          prerelease: ${{ needs.check-is-manually-triggered.outputs.is-manually-triggered }}
 
-  # Build for Windows.
-  release-windows:
-    name: Build for Windows
-    runs-on: windows-latest
-
-    permissions:
-      contents: write
-
-    steps:
-      - uses: tj-actions/branch-names@v7
-        id: get-tag-name
-        with:
-          strip_tag_prefix: v
-      - uses: actions/checkout@v4
-        with:
-          lfs: true
-      - uses: dtolnay/rust-toolchain@nightly
-        with:
-          targets: x86_64-pc-windows-msvc
-      - name: Build
-        run: |
-          cargo build --release --target x86_64-pc-windows-msvc
-      - name: Prepare
-        run: |
-          mkdir windows
-          cp target/x86_64-pc-windows-msvc/release/${{ env.binary }}.exe windows/
-          cp -r assets windows/
-      - name: Package
-        run: |
-          Compress-Archive -Path windows/* -DestinationPath ${{ env.binary }}.zip
-      - name: Upload binaries to artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          path: ${{ env.binary }}.zip
-          name: windows
-          retention-days: 1
-      - name: Upload binaries to release
-        if: ${{ env.add_binaries_to_github_release == 'true' }}
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ${{ env.binary }}.zip
-          asset_name: ${{ env.binary }}_${{ steps.get-tag-name.outputs.tag }}_windows-amd64.zip
-          tag: ${{ github.ref }}
-          overwrite: true
-
-  check-if-upload-to-itch-is-configured:
+  get-itch-target:
     runs-on: ubuntu-latest
-    outputs:
-      should-upload: ${{ steps.check-env.outputs.has-itch-target }}
     steps:
-      - id: check-env
+      - name: Get itch.io target
         run: |
-          if [[ -z "$itch_target" ]]; then
-            echo "has-itch-target=no" >> $GITHUB_OUTPUT
-          else
-            echo "has-itch-target=yes" >> $GITHUB_OUTPUT
-          fi
+          exit 0
+    outputs:
+      itch-target: ${{ env.ITCH_TARGET }}
 
-  upload-to-itch:
-    name: Upload to itch.io
+  check-should-upload-to-itch:
     runs-on: ubuntu-latest
     needs:
-      - check-if-upload-to-itch-is-configured
-      - release-wasm
-      - release-linux
-      - release-windows
-    if: ${{ needs.check-if-upload-to-itch-is-configured.outputs.should-upload == 'yes' }}
-
+      - check-is-manually-triggered
     steps:
-      - name: Download artifacts
-        uses: actions/download-artifact@v3
+      - name: Check whether to upload to itch.io
+        id: check
+        run: |
+          if [[ ${{ needs.check-is-manually-triggered.outputs.is-manually-triggered }} == true ]]; then
+            echo "should-upload=${{ env.UPLOAD_TO_ITCH == 'true' && inputs.upload-to-itch }}" >> "${GITHUB_OUTPUT}"
+          else
+            echo "should-upload=${{ env.UPLOAD_TO_ITCH == 'true' }}" >> "${GITHUB_OUTPUT}"
+          fi
+    # map a step outputs to job outputs
+    outputs:
+      should-upload: ${{ steps.check.outputs.should-upload }}
+
+  upload-to-itch:
+    runs-on: ubuntu-latest
+    needs:
+      - build
+      - get-version
+      - get-itch-target
+      - check-should-upload-to-itch
+    env:
+      VERSION: ${{ needs.get-version.outputs.version }}
+    if: >-
+      ${{
+        needs.check-should-upload-to-itch.outputs.should-upload == 'true' &&
+        needs.get-itch-target.outputs.itch-target != ''
+      }}
+    steps:
+      - name: Download all packages from artifacts
+        uses: actions/download-artifact@v4
         with:
-          path: ./builds
+          path: tmp/
+          pattern: package-*
+
       - name: Install butler
         run: |
-          curl -L -o butler.zip https://broth.itch.ovh/butler/linux-amd64/LATEST/archive/default
+          curl -L -o butler.zip https://broth.itch.zone/butler/linux-amd64/LATEST/archive/default
           unzip butler.zip
           chmod +x butler
           ./butler -V
-      - uses: tj-actions/branch-names@v7
-        id: get-tag-name
-        with:
-          strip_tag_prefix: v
-      - name: Upload to itch.io
+
+      - name: Upload all packages to itch.io
         env:
+          # read by butler
           BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
         run: |
-          for channel in $(ls builds); do
+          for pkg in $(ls tmp/); do
             ./butler push \
-                --fix-permissions \
-                --userversion="${{ steps.get-tag-name.outputs.tag }}" \
-                builds/$channel/* \
-                ${{ env.itch_target }}:$channel
+              --fix-permissions \
+              --userversion='${{ env.VERSION }}' \
+              tmp/"${pkg}"/* \
+              '${{ env.ITCH_TARGET }}':"${pkg#package-}"  # strip 'package-' prefix'
           done
