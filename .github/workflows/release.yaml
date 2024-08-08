@@ -23,6 +23,7 @@ env:
   ITCH_TARGET: mnemotic/game-of-life
   UPLOAD_TO_GITHUB_RELEASE: true
   USE_GIT_LFS: true
+  ASSET_DIR: assets
 
 jobs:
   get-version:
@@ -37,6 +38,8 @@ jobs:
       version: ${{ inputs.version || steps.get-tag-version.outputs.tag }}
 
   build:
+    permissions:
+      contents: write # required to create releases
     needs:
       - get-version
     env:
@@ -100,7 +103,7 @@ jobs:
           rm -rf tmp/
           mkdir -p tmp/bin '${{ env.OUT_DIR }}'
 
-      - name: Install cargo-binstall (Web)
+      - name: Install cargo-binstall (web)
         if: ${{ matrix.platform == 'web' }}
         uses: cargo-bins/cargo-binstall@v1.9.0
 
@@ -131,7 +134,7 @@ jobs:
         if: ${{ matrix.platform != 'web' }}
         run: |
           dst='${{ env.OUT_DIR }}/${{ env.PKG_NAME }}${{ matrix.binary_ext }}'
-          mv tmp/bin/*'${{ matrix.binary_ext }}' $dst
+          mv 'tmp/bin/*${{ matrix.binary_ext }}' $dst
 
       - name: Add assets to package (native)
         if: ${{ matrix.platform != 'web' }}
