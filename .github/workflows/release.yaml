@@ -125,6 +125,7 @@ jobs:
             bin="target/${target}/${{ matrix.profile }}/${{ env.BIN_NAME }}${{ matrix.binary_ext }}"
             dst_dir="tmp/bin/${target}${{ matrix.binary_ext }}"
             mv $bin $dst_dir
+          done
 
       - name: Add binaries to package (native)
         if: ${{ matrix.platform != 'web' }}
