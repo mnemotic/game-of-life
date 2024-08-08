@@ -1,0 +1,10 @@
+[build]
+# Required for correct paths when hosting on itch.io.
+public_url = "./"
+
+[serve]
+no_spa = true
+open = true
+
+[watch]
+ignore = ['.github/']
