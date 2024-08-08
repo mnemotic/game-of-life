@@ -28,6 +28,7 @@ features = [
     "png",
     "subpixel_glyph_atlas",
     "webgl2",
+    "wayland"
 ]
 
 # <https://github.com/rust-lang/cargo/issues/1197#issuecomment-1641086954>
