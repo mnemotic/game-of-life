@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version number in SemVer format (vX.Y.Z)'
+        description: 'Version number in SemVer format (X.Y.Z)'
         required: true
         type: string
 
@@ -34,7 +34,7 @@ jobs:
         with:
           strip_tag_prefix: 'v'
     outputs:
-      version: ${{ steps.get-tag-version.outputs.tag }}
+      version: ${{ inputs.version || steps.get-tag-version.outputs.tag }}
 
   build:
     needs:
@@ -54,7 +54,6 @@ jobs:
           - platform: linux
             targets: x86_64-unknown-linux-gnu
             profile: release-native
-            features: bevy/wayland
             package_ext: .zip
             runner: ubuntu-latest
 
@@ -121,11 +120,10 @@ jobs:
           for target in ${{ matrix.targets }}; do
             cargo build \
               --profile='${{ matrix.profile }}' \
-              --target="${target}" \
-              --features='${{ matrix.features }}'
+              --target="${target}"
           
-            bin=target/"${target}"/'${{ matrix.profile }}/${{ env.BIN_NAME }}${{ matrix.binary_ext }}'
-            dst_dir=tmp/bin/"${target}"'${{ matrix.binary_ext }}'
+            bin=target"/${target}/${{ matrix.profile }}/${{ env.BIN_NAME }}${{ matrix.binary_ext }}"
+            dst_dir="tmp/bin/${target}${{ matrix.binary_ext }}"
             mv $bin $dst_dir
 
       - name: Add binaries to package (native)
@@ -164,7 +162,7 @@ jobs:
           retention-days: 1
 
       - name: Upload package to GitHub releases
-        if: ${{ env.UPLOAD_TO_GITHUB_RELEASE == 'true' }}
+        if: ${{ env.UPLOAD_TO_GITHUB_RELEASE == 'true' && matrix.platform != 'web' }}
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: '${{ secrets.GITHUB_TOKEN }}'
