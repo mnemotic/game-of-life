@@ -13,7 +13,7 @@ license = "MIT OR Apache-2.0"
 version = "0.14.1"
 default-features = false
 
-# <https://github.com/bevyengine/bevy/blob/v0.12.0/docs/cargo_features.md>
+# <https://github.com/bevyengine/bevy/blob/v0.14.1/docs/cargo_features.md>
 features = [
     "bevy_asset",
     "bevy_core_pipeline",
@@ -53,6 +53,22 @@ opt-level = 0
 
 [profile.dev.package."*"]
 opt-level = 3
+
+#
+# The default 'release' profile is optimized for Wasm builds because that's what
+# Trunk [currently reads](https://github.com/trunk-rs/trunk/issues/605).
+#
+
+[profile.release]
+opt-level = "z"
+lto = "fat"
+codegen-units = 1
+strip = "debuginfo"
+
+[profile.release-native]
+inherits = "release"
+opt-level = 3
+strip = "none"
 
 [lints.rust]
 unsafe_code = "forbid"
