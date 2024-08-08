@@ -39,12 +39,16 @@ fn draw_controls_ui(
     mut contexts: EguiContexts<'_, '_>,
     mut actions: EventWriter<'_, InputAction>,
 ) {
+    let Some(egui_ctx) = contexts.try_ctx_mut() else {
+        return;
+    };
+
     let mut paused = *state.get() == AppState::Paused;
     egui::Window::new("Controls")
         .resizable(false)
         .collapsible(true)
         .movable(true)
-        .show(contexts.ctx_mut(), |ui| {
+        .show(egui_ctx, |ui| {
             egui::Grid::new("controls")
                 .num_columns(2)
                 .spacing([20.0, 4.0])
@@ -117,7 +121,12 @@ fn absorb_egui_inputs(
     mut mouse: ResMut<'_, ButtonInput<MouseButton>>,
     mut contexts: EguiContexts<'_, '_>,
 ) {
-    if contexts.ctx_mut().is_pointer_over_area() {
+    let Some(egui_ctx) = contexts.try_ctx_mut() else {
+        warn!("No valid EGUI context");
+        return;
+    };
+
+    if egui_ctx.is_pointer_over_area() {
         mouse.reset_all();
     }
 }

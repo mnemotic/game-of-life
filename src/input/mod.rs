@@ -143,8 +143,14 @@ fn get_cursor_world_position(
     q_camera: Query<'_, '_, (&Camera, &GlobalTransform), With<MainCamera>>,
     mut mouse_position: ResMut<'_, CursorWorldPosition>,
 ) {
-    let (camera, transform) = q_camera.single();
-    let window = q_window.single();
+    let Some(window) = q_window.get_single().ok() else {
+        warn!("No primary window");
+        return;
+    };
+    let Some((camera, transform)) = q_camera.get_single().ok() else {
+        warn!("No main camera");
+        return;
+    };
 
     // @NOTE: Sprites are offset by `OFFSET`. We need to offset the cursor position by
     // `OFFSET.neg()`.
