@@ -125,16 +125,22 @@ jobs:
               --profile='${{ matrix.profile }}' \
               --target="${target}"
           
-            bin="target/${target}/${{ matrix.profile }}/${{ env.BIN_NAME }}${{ matrix.binary_ext }}"
-            dst_dir="tmp/bin/${target}${{ matrix.binary_ext }}"
-            mv $bin $dst_dir
+            # move binaries to tmp/bin/ directory
+            src="target/${target}/${{ matrix.profile }}/${{ env.BIN_NAME }}${{ matrix.binary_ext }}"
+            dst="tmp/bin/${target}${{ matrix.binary_ext }}"
+            mv $src $dst
+            echo "moved file '${src}' to '${dst}'"
           done
 
       - name: Add binaries to package (native)
         if: ${{ matrix.platform != 'web' }}
         run: |
-          dst='${{ env.OUT_DIR }}/${{ env.PKG_NAME }}${{ matrix.binary_ext }}'
-          mv 'tmp/bin/*${{ matrix.binary_ext }}' $dst
+          for target in ${{ matrix.targets }}; do
+            dst='${{ env.OUT_DIR }}/${{ env.PKG_NAME }}${{ matrix.binary_ext }}'
+            src="tmp/bin/$target${{ matrix.binary_ext }}"
+            mv $src $dst
+            echo "moved file '${src}' to '${dst}'"
+          done
 
       - name: Add assets to package (native)
         if: ${{ matrix.platform != 'web' }}
