@@ -98,6 +98,7 @@ jobs:
             libudev-dev \
             libwayland-dev \
             libxkbcommon-dev
+
       - name: Prepare output directories
         run: |
           rm -rf tmp/
@@ -110,7 +111,7 @@ jobs:
       - name: Install Trunk (web)
         if: ${{ matrix.platform == 'web' }}
         run: |
-          cargo binstall --no-confirm trunk wasm-bindgen-cli wasm-opt
+          cargo binstall --no-confirm --force trunk wasm-bindgen-cli wasm-opt
 
       - name: Build binaries (web)
         if: ${{ matrix.platform == 'web' }}
