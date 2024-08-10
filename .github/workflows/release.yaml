@@ -51,42 +51,42 @@ jobs:
     outputs:
       is-manually-triggered: ${{ github.event_name == 'workflow_dispatch' }}
 
-  validate-version:
-    runs-on: ubuntu-latest
-    needs:
-      - check-is-manually-triggered
-    if: ${{ needs.check-is-manually-triggered.outputs.is-manually-triggered == 'true' }}
-    steps:
-      - name: Validate version
-        run: |
-          regex='^[0-9]+\.[0-9]+\.[0-9]+-(alpha|beta|rc)\.[1-9]+$'
-          version='${{ inputs.version }}'
-          if [[ $version =~ $regex ]]; then
-            echo "::notice ::Version '${version}' is valid"
-            exit 0
-          else
-            echo "::error ::Version '${version}' is not valid"
-            exit 1
-          fi
-
   get-version:
     runs-on: ubuntu-latest
     needs:
-      - validate-version
-    if: >-
-      ${{
-        always() &&
-        !cancelled() &&
-        needs.validate-version.result != 'failure'
-      }}
+      - check-is-manually-triggered
     steps:
       - name: Get tag version
         id: get-tag-version
         uses: tj-actions/branch-names@v8
         with:
           strip_tag_prefix: 'v'
+
+      - name: Get input version
+        id: get-input-version
+        run: |
+          echo "version=${{ inputs.version }}" >> "${GITHUB_OUTPUT}"
+
+      - name: Validate version
+        id: validate-version
+        run: |
+          if [[ ${{ needs.check-is-manually-triggered.outputs.is-manually-triggered }} == true ]]; then
+            regex='^[0-9]+\.[0-9]+\.[0-9]+-(alpha|beta|rc)\.[1-9]+$'
+            version='${{ steps.get-input-version.outputs.version }}'
+          else
+            regex='^[0-9]+\.[0-9]+\.[0-9]+$'
+            version='${{ steps.get-tag-version.outputs.tag }}'
+          fi
+
+          if [[ $version =~ $regex ]]; then
+            echo "version=${version}" >> "${GITHUB_OUTPUT}"
+            exit 0
+          else
+            echo "::error ::Version number '${version}' is not valid"
+            exit 1
+          fi
     outputs:
-      version: ${{ inputs.version || steps.get-tag-version.outputs.tag }}
+      version: ${{ steps.validate-version.outputs.version }}
 
   build:
     permissions:
