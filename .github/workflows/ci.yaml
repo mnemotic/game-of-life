@@ -1,13 +1,17 @@
-# @CREDIT: <https://github.com/bevyengine/bevy_github_ci_template/blob/main/.github/workflows/ci.yaml>
+# @CREDIT:
+#   <https://github.com/bevyengine/bevy_github_ci_template/blob/main/.github/workflows/release.yaml>
+#   <https://github.com/TheBevyFlock/bevy_quickstart/blob/main/.github/workflows/release.yaml>
 
 name: CI
 
 on:
   workflow_dispatch:
   push:
-    branches: [ main ]
+    branches:
+      - main
   pull_request:
-    branches: [ main ]
+    branches:
+      - main
 
 env:
   CARGO_TERM_COLOR: always

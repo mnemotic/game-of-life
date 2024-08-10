@@ -8,7 +8,7 @@ on:
   push:
     tags:
       # <https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#filter-pattern-cheat-sheet>
-      - 'v[0-9]+.[0-9]+.[0-9]+*'
+      - 'v[0-9]+.[0-9]+.[0-9]+'
 
   workflow_dispatch:
     inputs:
@@ -77,7 +77,7 @@ jobs:
       ${{
         always() &&
         !cancelled() &&
-        needs.validate-version.result == 'success'
+        needs.validate-version.result != 'failure'
       }}
     steps:
       - name: Get tag version
