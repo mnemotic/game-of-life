@@ -1,4 +1,6 @@
 [build]
+target = "web/index.html"
+dist = "target/trunk/"
 # Required for correct paths when hosting on itch.io.
 public_url = "./"
 
