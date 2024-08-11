@@ -1726,7 +1726,7 @@ dependencies = [
 
 [[package]]
 name = "game-of-life"
-version = "0.1.8"
+version = "0.1.9"
 dependencies = [
  "ahash",
  "bevy",
