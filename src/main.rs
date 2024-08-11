@@ -52,6 +52,7 @@ fn main() {
                         resolution: (width as f32, height as f32).into(),
                         position: WindowPosition::Centered(MonitorSelection::Primary),
                         title: String::from("Conway's Game of Life"),
+                        prevent_default_event_handling: false,
                         ..default()
                     }),
                     ..default()
