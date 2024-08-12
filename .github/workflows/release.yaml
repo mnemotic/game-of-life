@@ -233,6 +233,7 @@ jobs:
           tag: v${{ env.VERSION }}
           overwrite: true
           prerelease: ${{ needs.check-is-manually-triggered.outputs.is-manually-triggered }}
+          release_name: '${{ PKG_NAME }} ${{ env.VERSION }}'
 
   get-itch-target:
     runs-on: ubuntu-latest
