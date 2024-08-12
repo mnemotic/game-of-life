@@ -3,6 +3,8 @@
 Conway's Game of Life written in [Rust](https://www.rust-lang.org/), using the [Bevy](https://bevyengine.org/) game
 engine.
 
+Available on [itch.io](https://mnemotic.itch.io/game-of-life).
+
 ## Features
 
 Implemented and planned features.
@@ -14,6 +16,7 @@ Implemented and planned features.
     - [ ] Toggle a rectangular group of cells.
 - [X] Increase / decrease simulation rate (speed).
 - [ ] Save / load.
+- [ ] Zoom.
 - [ ] GUI.
     - [ ] World, cell, and simulation statistics.
     - [X] Visual controls.
