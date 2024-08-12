@@ -113,7 +113,7 @@ fn init_presentation(
                         index: 254,
                     },
                     Sprite {
-                        color: get_age_color(0).into(),
+                        color: get_age_color(0f32).into(),
                         custom_size: Some(SPRITE_SIZE),
                         ..default()
                     },
@@ -160,9 +160,17 @@ fn update_presentation(
 
     for (position, mut atlas, mut sprite) in &mut q_sprites {
         if let Some(cell) = life.cells.get(position) {
+            // FIXME: Magic number.
             atlas.index = 254;
-            sprite.color = get_age_color(cell.age).into();
+
+            // REVIEW:
+            //   There should be a better way to handle this. Fortunately, any bugs will only
+            //   manifest when cell age is greater than 2^24 (16,777,216).
+            #[allow(clippy::cast_precision_loss)]
+            let q = (cell.age as f32) / (life.max_age as f32);
+            sprite.color = get_age_color(q).into();
         } else {
+            // FIXME: Magic number.
             atlas.index = 255;
             sprite.color = DEAD_COLOR.into();
         }

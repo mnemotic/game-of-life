@@ -20,21 +20,20 @@ pub mod cells {
 
     pub const DEAD_COLOR: Srgba = bevy::color::palettes::css::GRAY;
 
-    pub fn get_age_color(age: usize) -> Srgba {
+    pub fn get_age_color(q: f32) -> Srgba {
         static GRADIENT: LazyLock<ColorGradient> = LazyLock::new(|| {
             let mut gradient = ColorGradient::new();
-            gradient.insert(ColorPoint::new(0.0, Srgba::rgb_u8(139, 190, 28)));
-            gradient.insert(ColorPoint::new(0.2, Srgba::rgb_u8(162, 201, 38)));
-            gradient.insert(ColorPoint::new(0.4, Srgba::rgb_u8(185, 212, 47)));
-            gradient.insert(ColorPoint::new(0.6, Srgba::rgb_u8(209, 222, 57)));
-            gradient.insert(ColorPoint::new(0.8, Srgba::rgb_u8(232, 233, 66)));
-            gradient.insert(ColorPoint::new(1.0, Srgba::rgb_u8(255, 244, 76)));
+            gradient.insert(ColorPoint::new(0.0, Srgba::rgb_u8(143, 0, 255))); // violet (electric)
+            gradient.insert(ColorPoint::new(0.2, Srgba::rgb_u8(178, 34, 34))); // red (fire brick)
+            gradient.insert(ColorPoint::new(0.4, Srgba::rgb_u8(255, 121, 0))); // orange (safety)
+            gradient.insert(ColorPoint::new(0.6, Srgba::rgb_u8(255, 211, 0))); // yellow (ncs)
+            gradient.insert(ColorPoint::new(0.8, Srgba::rgb_u8(50, 205, 50))); // green (lime)
+            gradient.insert(ColorPoint::new(1.0, Srgba::rgb_u8(0, 183, 235))); // cyan (sub. primary)
 
             gradient
         });
 
-        #[allow(clippy::cast_precision_loss)]
-        GRADIENT.sample((age as f32) / 10.0)
+        GRADIENT.sample(q)
     }
 }
 

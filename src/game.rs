@@ -74,11 +74,11 @@ pub struct SimulationUpdateTimer(pub Timer);
 #[derive(Copy, Clone)]
 pub struct Cell {
     pub alive: bool,
-    pub age: usize,
+    pub age: u32,
 }
 
 impl Cell {
-    fn new(alive: bool, age: usize) -> Self {
+    fn new(alive: bool, age: u32) -> Self {
         Self { alive, age }
     }
 }
@@ -95,7 +95,8 @@ pub struct Life {
     pub bounds: IRect,
     pub history: VecDeque<HashMap<IVec2, Cell>>,
     pub cells: HashMap<IVec2, Cell>,
-    pub generation: usize,
+    pub generation: u32,
+    pub max_age: u32,
 }
 
 impl Life {
@@ -117,6 +118,7 @@ impl Life {
             cells: HashMap::new(),
             history: VecDeque::with_capacity(Self::MAX_HISTORY_SIZE),
             generation: 0,
+            max_age: 0,
         }
     }
 }
@@ -195,6 +197,7 @@ pub fn advance_simulation(life: ResMut<'_, Life>, mut actions: EventReader<'_, '
     }
 
     let life = life.into_inner();
+    life.max_age = 1;
 
     for action in actions.read() {
         if let InputAction::AdvanceSimulation = action {
@@ -236,18 +239,16 @@ pub fn advance_simulation(life: ResMut<'_, Life>, mut actions: EventReader<'_, '
                     // same; if the count is anything else, then the state of the inner cell is
                     // dead.
                     match count {
-                        3 => {
+                        3 | 4 => {
                             // Cell at `pt` either stays alive or spawns new life.
                             if let Some(cell) = life.cells.get(&pt) {
-                                next_gen.insert(pt, Cell::new(cell.alive, cell.age + 1));
-                            } else {
+                                let cell = Cell::new(cell.alive, cell.age + 1);
+                                if cell.age > life.max_age {
+                                    life.max_age = cell.age;
+                                }
+                                next_gen.insert(pt, cell);
+                            } else if count == 3 {
                                 next_gen.insert(pt, Cell::default());
-                            }
-                        }
-                        4 => {
-                            // Existing cells stay as they were.
-                            if let Some(cell) = life.cells.get(&pt) {
-                                next_gen.insert(pt, Cell::new(cell.alive, cell.age + 1));
                             }
                         }
                         _ => {} // Cell at `pt` dies.
