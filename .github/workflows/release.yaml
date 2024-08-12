@@ -159,7 +159,7 @@ jobs:
 
       - name: Install cargo-binstall (web)
         if: ${{ matrix.platform == 'web' }}
-        uses: cargo-bins/cargo-binstall@v1.9.0
+        uses: cargo-bins/cargo-binstall@v1.10.0
 
       - name: Install Trunk (web)
         if: ${{ matrix.platform == 'web' }}
