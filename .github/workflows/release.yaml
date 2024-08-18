@@ -253,9 +253,16 @@ jobs:
         id: check
         run: |
           if [[ ${{ needs.check-is-manually-triggered.outputs.is-manually-triggered }} == true ]]; then
-            echo "should-upload=${{ env.UPLOAD_TO_ITCH == 'true' && inputs.upload-to-itch }}" >> "${GITHUB_OUTPUT}"
+            should_upload=${{ env.UPLOAD_TO_ITCH == 'true' && inputs.upload-to-itch }}
           else
-            echo "should-upload=${{ env.UPLOAD_TO_ITCH == 'true' }}" >> "${GITHUB_OUTPUT}"
+            should_upload=${{ env.UPLOAD_TO_ITCH == 'true' }}
+          fi
+          
+          echo "should-upload=${should_upload}" >> "${GITHUB_OUTPUT}"
+          if [[ $should_upload == true ]]; then
+            echo "::notice ::Build will be uploaded to itch.io"
+          else
+            echo "::notice ::Build will NOT be uploaded to itch.io"
           fi
     # map a step outputs to job outputs
     outputs:
