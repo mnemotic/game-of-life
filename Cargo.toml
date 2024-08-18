@@ -1,6 +1,6 @@
 [package]
 name = "game-of-life"
-version = "0.1.9"
+version = "0.1.10"
 edition = "2021"
 description = "Conway's Game of Life in Bevy."
 authors = ["Martin Green"]
