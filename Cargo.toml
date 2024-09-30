@@ -43,7 +43,7 @@ bevy_pixel_camera = { git = "https://github.com/drakmaniso/bevy_pixel_camera", r
 bevy_framepace = "0.17.1"
 
 console_error_panic_hook = "0.1"
-ordered-float = "4.1.0"
+ordered-float = "4.3.0"
 priority-queue = "2.1.1"
 ahash = "0.8.4"
 bevy_egui = { version = "0.29.0", default-features = false, features = ["default_fonts", "render"] }
